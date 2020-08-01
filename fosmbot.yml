@@ -1,0 +1,34 @@
+dbconnstr: host=localhost port=5432 user=postgres dbname=fosm password=yourpasswd
+botowner: 348781827
+
+LEVELS:
+  - owner
+  - superadmin
+  - fedadmin
+  - user
+  - banned
+
+LEVEL_OWNER:
+  - promote
+  - demote
+  - newowner
+
+LEVEL_SUPERADMIN:
+  - addgroup
+  - removegroup
+  - changeLevel
+
+LEVEL_FEDADMIN:
+  - demoteme
+  - fban
+  - funban
+  - fbanlist
+  - fstat
+
+LEVEL_USER:
+  - fedadmins
+  - superadmins
+  - owners
+
+LEVEL_BANNED:
+  - mylevel

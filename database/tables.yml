@@ -1,0 +1,12 @@
+table_users:
+  - id int
+  - username text
+  - displayname text
+  - level text
+  - comment text
+  - issuedbyid int
+  - ts timestamp
+
+table_groups:
+  - id int
+  
