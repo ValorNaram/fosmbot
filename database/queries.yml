@@ -15,4 +15,3 @@ updatedisplayname: update users set displayname=%s where id=%s;
 updatecomment: update users set comment=%s where id=%s;
 updateissuedbyid: update users set issuedbyid=%s where id=%s;
 updatetimestamp: update users set timestamp=%s where id=%s;
-showbannedusers: select * from users where id=%s and level='banned' LIMIT 1;

@@ -23,6 +23,7 @@ class commandControl():
 	
 	def changeLevel(self, client, message, userlevel, userlevel_int):
 		command = message.command
+		
 		if not len(command) == 2:
 			self.replySilence(message, "Syntax: `/changeLevel <level> <user>`")
 			return False
@@ -49,17 +50,18 @@ class commandControl():
 			return False
 		
 		if not userlevel = "owner":
-			dbhelper.sendToPostgres(config["changeLevel"], ("user", userlevel_int))
+			dbhelper.sendToPostgres(config["changeLevel"], ("user", message.from_user.id))
 		
 		self.reply(message, "You are now powerless! Thank You for your effort to cut down spammers")
 	
 	def funban(self, client, message, userlevel, userlevel_int):
 		command = message.command
 		
+		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userToPromote))
+				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
 				return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned"))
@@ -77,10 +79,11 @@ class commandControl():
 			self.replySilence(message, "Please provide a reason to ban a user for 365 days. Syntax: `/fban <username> <reason>".format(userToPromote))
 			return False
 		
+		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userToPromote))
+				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
 				return False
 		toban = int(command[0])
 		del command[0]
@@ -102,10 +105,12 @@ class commandControl():
 		if not userlevel_int == 0:
 			return False
 		
+		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
-			if command[1].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userToPromote))
+			if command[0].startswith("error"):
+				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
+				return False
 		
 		dbhelper.sendToPostgres(config["changeLevel"], ("owner", int(command[0])))
 		dbhelper.sendToPostgres(config["changeLevel"], ("user", int(command[0])))
@@ -156,12 +161,31 @@ class commandControl():
 		
 		message.reply_document("fbanlist.csv")
 	
-	def fstat(self, client, message, userlevel, userlevel_int)
+	def fstat(self, client, message, userlevel, userlevel_int):
+		if not message.chat.type == "private":
+			return False
+	
+		command = message.command
+		
+		if len(command) == 0: # becomes /mylevel
+			self.mylevel(self, client, message, userlevel, userlevel_int)
+			return True
+		
+		userinput = command[0]
+		if command[0].startswith("@"): # if true, then resolve username to telegram id
+			command[0] = dbhelper.resolveUsername(command[0])
+			if command[0].startswith("error"):
+				self.reply(message, "User '{}' does not exist in the database".format(userinput))
+				return False
+		
+		userlevel = dbhelper.getuserlevel(command[0])
+		self.reply("'{}' has the level: {}".format(userinput, userlevel))
+	
 	def mylevel(self, client, message, userlevel, userlevel_int):
 		if not message.chat.type == "private":
 			return False
 		
-		message.reply(userlevel)
+		self.reply("You have the level: {}".format(userlevel))
 		
 	def execCommand(self, command, client, message, userlevel, userlevel_int):
 		if not command[0].startswith("__"):
