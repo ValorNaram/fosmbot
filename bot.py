@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from lib import database
-import logging, yaml, pyrogram, time
+import logging, yaml, pyrogram, time, os
 
 config = {}
 
@@ -12,17 +12,29 @@ class commandControl():
 	def __init__(self):
 		pass
 	
-	def reply(message, self, message, text):
-		message.reply(message, text, disable_web_page_preview=True)
+	def getUserInQuestion(self, message):
+		if "reply_to_message" in dir(message)
+			return message.reply_to_message.from_user.id
+	def ownerCannotDo(self, message):
+		message.reply("An owner cannot do this", disable_web_page_preview=True)
 	
-	def replySilence(message, self, message, text):
-		message.reply(message, text, disable_web_page_preview=True, disable_notification=True)
+	def userNotFound(self, message, user):
+		message.reply("User '{}' does not exist in the database".format(user), disable_web_page_preview=True, disable_notification=True)
+		
+	def reply(self, message, text):
+		message.reply(text, disable_web_page_preview=True)
+	
+	def replySilence(self, message, text):
+		message.reply(text, disable_web_page_preview=True, disable_notification=True)
 	
 	def createTimestamp(self):
 		return time.strftime("%Y-%m-%d")
 	
 	def changeLevel(self, client, message, userlevel, userlevel_int):
 		command = message.command
+		
+		if "reply_to_message" in dir(message)
+			command[1] = message.reply_to_message.from_user.id
 		
 		if not len(command) == 2:
 			self.replySilence(message, "Syntax: `/changeLevel <level> <user>`")
@@ -37,7 +49,7 @@ class commandControl():
 		if command[1].startswith("@"): # if true, then resolve username to telegram id
 			command[1] = dbhelper.resolveUsername(command[1])
 			if command[1].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userToPromote))
+				self.userNotFound(message, userToPromote)
 		
 		userToPromote_int = config["levels"].index(dbhelper.getuserlevel(command[1]))
 		if not userToPromote_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
@@ -49,19 +61,27 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		if not userlevel = "owner":
+		if userlevel = "owner":
+			self.ownerCannotDo(message)
+		else:
 			dbhelper.sendToPostgres(config["changeLevel"], ("user", message.from_user.id))
-		
-		self.reply(message, "You are now powerless! Thank You for your effort to cut down spammers")
+			self.reply(message, "You are now powerless! Thank You for your effort to cut down spammers!")
 	
 	def funban(self, client, message, userlevel, userlevel_int):
 		command = message.command
+		
+		if "reply_to_message" in dir(message)
+			command[0] = message.reply_to_message.from_user.id
+		
+		if len(command) == 0:
+			self.reply("Syntax: `/funban <username>`")
+			return False
 		
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
+				self.userNotFound(message, userinput)
 				return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned"))
@@ -75,6 +95,9 @@ class commandControl():
 	def fban(self, client, message, userlevel, userlevel_int):
 		command = message.command
 		
+		if "reply_to_message" in dir(message)
+			command[0] = message.reply_to_message.from_user.id
+		
 		if not len(command) > 2:
 			self.replySilence(message, "Please provide a reason to ban a user for 365 days. Syntax: `/fban <username> <reason>".format(userToPromote))
 			return False
@@ -83,7 +106,7 @@ class commandControl():
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
+				self.userNotFound(message, userinput)
 				return False
 		toban = int(command[0])
 		del command[0]
@@ -102,6 +125,9 @@ class commandControl():
 		
 		command = message.command
 		
+		if len(command) == 0:
+			self.reply("Command to transfer Ownership of 'osmallgroups' federation. Syntax: `/newowner <username>`")
+			return False
 		if not userlevel_int == 0:
 			return False
 		
@@ -109,11 +135,12 @@ class commandControl():
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.replySilence(message, "User '{}' does not exist in the database".format(userinput))
+				self.reply("Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
+				self.userNotFound(message, userinput)
 				return False
 		
 		dbhelper.sendToPostgres(config["changeLevel"], ("owner", int(command[0])))
-		dbhelper.sendToPostgres(config["changeLevel"], ("user", int(command[0])))
+		dbhelper.sendToPostgres(config["changeLevel"], ("user", message.from_user.id))
 		self.replySilence(message, "Ownership changed")
 	
 	def addgroup(self, client, message, userlevel, userlevel_int):
@@ -122,7 +149,7 @@ class commandControl():
 	
 	def removegroup(self, client, message, userlevel, userlevel_int):
 		dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id))
-		self.reply(message, "Removed group. Now it no longer belongs to the federation 'osmallgroups'")
+		self.reply(message, "Removed group. Now it does not longer belongs to the federation 'osmallgroups'")
 	
 	def __returnusers(self, message, level):
 		if not message.chat.type == "private":
@@ -168,6 +195,7 @@ class commandControl():
 		command = message.command
 		
 		if len(command) == 0: # becomes /mylevel
+			self.reply("Syntax `/fstat <username>` not used. Executing `/mylevel` command")
 			self.mylevel(self, client, message, userlevel, userlevel_int)
 			return True
 		
@@ -175,7 +203,7 @@ class commandControl():
 		if command[0].startswith("@"): # if true, then resolve username to telegram id
 			command[0] = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				self.reply(message, "User '{}' does not exist in the database".format(userinput))
+				self.userNotFound(message, userinput)
 				return False
 		
 		userlevel = dbhelper.getuserlevel(command[0])
@@ -195,6 +223,8 @@ class commandControl():
 @app.on_message(pyrogram.Filters.new_chat_members)
 def userjoins(client, message):
 	newmembers = message.new_chat_members
+	if newmembers is not list:
+		newmembers = [newmembers]
 	
 	for member in newmembers:
 		displayname = []
@@ -225,21 +255,37 @@ def postcommandprocessing(client, message):
 def checkExistenceOfUser(client, message):
 	message.new_chat_members = message.from_user
 	userjoins(client, message)
+	
+	if "forward_from" in dir(message):
+		message.new_chat_members = message.forward_from
+		userjoins(client, message)
 				
 def main():
 	global config, dbhelper, commander, allcommands
 	
-	logging.info("loading 'fosmbot.yml'...")
+	logging.info("perform automatic set up...")
+	os.chdir("database")
+	os.system("python3 setup.py")
+	os.chdir("../")
+	
+	logging.info("loading 'fosmbot.yml' configuration...")
 	sfile = open("fosmbot.yml", "r")
 	config = yaml.load(sfile, loader=yaml.FullLoader)
 	sfile.close()
 	
+	logging.info("loading available commands...")
 	for level in config["levels"]:
 		for command in config["LEVEL_" + level.upper()]:
 			allcommands.append(command)
 	
 	logging.info("connecting to database...")
 	dbhelper = database.helper(config)
+	
+	logging.info("checking Ownership of user '{}'...".format(config["botowner"]))
+	if dbhelper.userExists(config["botowner"]):
+		if not dbhelper.userHasLevel(config["botowner"], "owner"):
+			logging.info("  setting user '{}' as owner".format(config["botowner"]))
+			dbhelper.sendToPostgres(config["changeLevel"], ("owner", int(config["botowner"])))
 	
 	logging.info("starting fosmbot...")
 	commander = commandControl()

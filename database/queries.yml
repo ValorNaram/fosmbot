@@ -7,7 +7,7 @@ adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 removeuser: delete from users where id=%s;
 userexists: select * from users where id=%s LIMIT 1;
 userhaslevel: select * from users where id=%s and level=%s LIMIT 1;
-getuserlevel: select id, level from users where id=%s
+getuserlevel: select id, level from users where id=%s LIMIT 1;
 resolveusername: select id, username from users where username=%s LIMIT 1;
 banuser: update users set level='banned' where id=%s;
 unbanuser: update users set level='user' where id=%s;
