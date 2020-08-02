@@ -341,9 +341,9 @@ async def postcommandprocessing(client, message): # belongs to fosmbot's core
 			else:
 				objid = message.from_user.id
 			
-			if "GROUPCOMMANDS" in config:
-				if command[0] in config["GROUPCOMMANDS"]:
-					if not objid == 0 and str(objid) in config["GROUPCOMMANDS"][command[0]]:
+			if "groupspecified" in config:
+				if command[0] in config["groupspecified"]:
+					if not objid == 0 and str(objid) in config["groupspecified"][command[0]]:
 						await commander.execCommand(command, client, message, userlevel, rightlevel)
 						return True
 				else:
