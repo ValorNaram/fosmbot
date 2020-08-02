@@ -1,10 +1,9 @@
 DATABASE_HOST: localhost
 DATABASE_PORT: 5432
 DATABASE_USER: postgres
-DATABASE_USER_PASSWD: yourpasswd
+DATABASE_USER_PASSWD: tz()UI1278
 DATABASE_DBNAME: fosm
 
-botowner: 348781827
 logchannel: -1001206244890
 
 LEVELS:
@@ -38,6 +37,8 @@ LEVEL_USER:
 
 LEVEL_BANNED:
   - mylevel
+  - groupid
+  - myid
 
 changeLevel: update users set level=%s where id=%s;
 authorizegroup: insert into groups values (%s);
@@ -47,7 +48,6 @@ getusersbylevel: select id, username, displayname, comment, issuedbyid where lev
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 removeuser: delete from users where id=%s;
 userexists: select * from users where id=%s LIMIT 1;
-userhaslevel: select * from users where id=%s and level=%s LIMIT 1;
 getuserlevel: select id, level from users where id=%s LIMIT 1;
 resolveusername: select id, username from users where username=%s LIMIT 1;
 banuser: update users set level='banned' where id=%s;

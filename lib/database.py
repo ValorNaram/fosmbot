@@ -48,8 +48,7 @@ class helper():
 	
 	def userHasLevel(self, userid, level):
 		if self.userExists(userid):
-			output = self.sendToPostgres(self.conf["userhaslevel"], level)
-			if len(output) > 0:
+			if self.getuserlevel(userid) == level:
 				return True
 		return False
 	
@@ -58,14 +57,17 @@ class helper():
 			return username
 		
 		query = self.conf["resolveusername"]
-		output = self.sendToPostgres(query, (username))
+		output = self.sendToPostgres(query, (username,))
 		
 		if len(output) > 0:
 			for user in output:
+				print(user)
 				return user
+		
+		return "error"
 	
 	def getuserlevel(self, userid):
-		output = self.sendToPostgres(self.conf["getuserlevel"], (userid))
+		output = self.sendToPostgres(self.conf["getuserlevel"], (userid,))
 
 		for user in output:
 			return output[user]["level"]
