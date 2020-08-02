@@ -1,5 +1,11 @@
-dbconnstr: host=localhost port=5432 user=postgres dbname=fosm password=yourpasswd
+DATABASE_HOST: localhost
+DATABASE_PORT: 5432
+DATABASE_USER: postgres
+DATABASE_USER_PASSWD: yourpasswd
+DATABASE_DBNAME: fosm
+
 botowner: 348781827
+logchannel: -1001206244890
 
 LEVELS:
   - owner
@@ -32,3 +38,33 @@ LEVEL_USER:
 
 LEVEL_BANNED:
   - mylevel
+
+changeLevel: update users set level=%s where id=%s;
+authorizegroup: insert into groups values (%s);
+deauthorizegroup: delete from groups where id=%s;
+getgroups: select id from groups;
+getusersbylevel: select id, username, displayname, comment, issuedbyid where level=%s; 
+adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
+removeuser: delete from users where id=%s;
+userexists: select * from users where id=%s LIMIT 1;
+userhaslevel: select * from users where id=%s and level=%s LIMIT 1;
+getuserlevel: select id, level from users where id=%s LIMIT 1;
+resolveusername: select id, username from users where username=%s LIMIT 1;
+banuser: update users set level='banned' where id=%s;
+unbanuser: update users set level='user' where id=%s;
+updatedisplayname: update users set displayname=%s where id=%s;
+updatecomment: update users set comment=%s where id=%s;
+updateissuedbyid: update users set issuedbyid=%s where id=%s;
+updatetimestamp: update users set timestamp=%s where id=%s;
+
+table_users:
+  - id int
+  - username text
+  - displayname text
+  - level text
+  - comment text
+  - issuedbyid int
+  - ts timestamp
+
+table_groups:
+  - id int

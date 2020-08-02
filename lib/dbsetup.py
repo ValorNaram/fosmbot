@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-import sys, os, copy
-sys.path.append(os.path.join(os.path.dirname(os.getcwd())))
-os.chdir(os.path.join(os.path.dirname(os.getcwd())))
-from lib.config import readConfig
 from lib.database import management
+import copy
 
-APIconf = {}
-queries = {"users": "createtable", "groups": "createtable"}
-cmds = {"createdb": """psql -c "CREATE DATABASE {};" """, "exeSQL": "psql --dbname={} --file={}"}
-sqls = {"createtable": "CREATE TABLE {} ({})"}
-
-def main():
-	global APIconf, queries, cmds
-	
-	print("loading mentorAPI configuration...")
-	APIconf = readConfig(os.path.join(os.getcwd(), "mentorapi.yml")).config
+def setupDB(APIconf):
+	queries = {"users": "createtable", "groups": "createtable"}
+	cmds = {"createdb": """psql -c "CREATE DATABASE {};" """, "exeSQL": "psql --dbname={} --file={}"}
+	sqls = {"createtable": "CREATE TABLE {} ({})"}
 	
 	print("connecting to the database with the following dbconnstr:")
 	print("  ", APIconf["dbconnstr"])
@@ -22,11 +13,21 @@ def main():
 	if not dbhelper.error == "":
 		print("\033[1;mDatabase does not exist\033[0;m")
 		
-		print("creating database '{}'...".format(APIconf["dbname"]))
-		dbhelper.createDatabase(APIconf["dbname"])
+		dbconnstr = []
+		dbname = ""
+		for item in APIconf["dbconnstr"].split(" "):
+			key, value = item.split("=", 1)
+			if not key == "dbname":
+				dbconnstr.append("{}={}".format(key, value))
+			else:
+				dbname = value
+		dbhelper = management(" ".join(dbconnstr))
+		
+		print("creating database '{}'...".format(dbname))
+		dbhelper.createDatabase(dbname)
 		
 		print("restarting...")
-		return main()
+		return setupDB(APIconf)
 	else:
 		print("\033[1;mDatabase does exist\033[0;m")
 	
@@ -40,7 +41,7 @@ def main():
 				print("  creating table '{}'...".format(i))
 				dbhelper.executeCMD(sqls[queries[i]].format(i, ",\n".join(APIconf["table_" + i])))
 			else:
-				print("\033[0;31mtable scheme not specified in osmallgroupsbot.yml!\033[0;m")
+				print("\033[0;31mtable scheme not specified in fosmbot.yml!\033[0;m")
 			
 	print("syncing columns (insert/remove)...")
 	changes = False
@@ -54,6 +55,3 @@ def main():
 	
 	print("disconnecting from database...")
 	dbhelper.tearDown()
-
-if "__main__" == __name__:
-	main()
