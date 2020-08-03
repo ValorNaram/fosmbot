@@ -18,6 +18,7 @@ LEVEL_OWNER:
   - promote
   - demote
   - newowner
+  - testme
 
 LEVEL_SUPERADMIN:
   - addgroup

@@ -55,6 +55,9 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
+	async def testme(self, client, message, userlevel, userlevel_int):
+		self.__replySilence(message, "Tested me!")
+	
 	async def changeLevel(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		command = message.command
 		
@@ -291,7 +294,7 @@ def main(): # belongs to fosmbot's core
 		logging.info("using predefined 'dbconnstr' instead of generating one...")
 	
 	logging.info("ensuring owner...")
-	config["botowner"] = readOwner()
+	config["botowner"] = int(readOwner())
 	
 	logging.info("perform automatic set up...")
 	dbsetup.setupDB(config)
@@ -317,7 +320,7 @@ def addUserToDatabase(user): # belongs to fosmbot's core
 		if not dbhelper.userExists(user.id):
 			dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
 	
-	if user.id == config[config["botowner"]]:
+	if user.id == config["botowner"]:
 		if not dbhelper.userHasLevel(config["botowner"], "owner"):
 			logging.info("  setting user '{}' ({}) as owner".format(displayname, user.id))
 			dbhelper.sendToPostgres(config["changeLevel"], ("owner", int(config["botowner"])))
@@ -347,9 +350,12 @@ async def postcommandprocessing(client, message): # belongs to fosmbot's core
 					if not objid == 0 and str(objid) in config["groupspecified"][command[0]]:
 						await commander.execCommand(command, client, message, userlevel, rightlevel)
 						return True
-				else:
-					await commander.execCommand(command, client, message, userlevel, rightlevel)
-					return True
+					else:
+						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.")
+						return False
+			
+			await commander.execCommand(command, client, message, userlevel, rightlevel)
+			return True
 	
 	await message.reply("Insufficient rights. You are: {}".format(userlevel), disable_web_page_preview=True)
 

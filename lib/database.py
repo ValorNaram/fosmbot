@@ -57,12 +57,11 @@ class helper():
 			return username
 		
 		query = self.conf["resolveusername"]
-		output = self.sendToPostgres(query, (username,))
+		output = self.sendToPostgres(query, (username.replace("@", ""),))
 		
 		if len(output) > 0:
 			for user in output:
-				print(user)
-				return user
+				return str(user)
 		
 		return "error"
 	
