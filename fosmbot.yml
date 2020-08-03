@@ -54,7 +54,7 @@ LEVEL_BANNED:
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 getuser: select * from users where id=%s;
 removeuser: delete from users where id=%s;
-changeLevel: update users set level=%s where id=%s;
+changelevel: update users set level=%s where id=%s;
 authorizegroup: insert into groups values (%s);
 deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
