@@ -27,6 +27,14 @@ class commandControl():
 	def __getUserInQuestion(self, message): # belongs to fosmbot's core
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			return message.reply_to_message.from_user.id
+	
+	async def __canTouchUser(self, message, userInQuestion, issuer_level):
+		userInQuestion_level = config["LEVELS"].index(dbhelper.getuserlevel(userInQuestion))
+		if userInQuestion_level > issuer_level: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
+			return True
+		await self.__replySilence(message, "You don't have the necessary rights to touch the user!")
+		return False
+	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
 	
@@ -132,6 +140,9 @@ class commandControl():
 		userInQuestion_id = command[0]
 		del command[0]
 		
+		if not await self.__canTouchUser(message, userInQuestion_id, userlevel_int):
+			return False
+		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), int(userInQuestion_id)))
 		await self.__reply(message, "Comment about [{}](tg://user?id={}) changed".format(userInQuestion, str(userInQuestion_id)))
 	
@@ -148,8 +159,11 @@ class commandControl():
 			await self.__replySilence(message, "Syntax: `/changelevel <username or id> <level>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
+		try:
+			levelToPromoteTo_int = config["LEVELS"].index(command[1])
+		except:
+			await self.__replySilence(message, "Level `{}` does not exist!".format(command[1]))
 		
-		levelToPromoteTo_int = config["LEVELS"].index(command[1])
 		if not levelToPromoteTo_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
 			return False # user does not have the right to promote <user> to <level>
 		
@@ -161,12 +175,11 @@ class commandControl():
 				await self.__userNotFound(message, userToPromote)
 				return False
 		
-		userToPromote_int = config["LEVELS"].index(dbhelper.getuserlevel(command[0]))
-		if not userToPromote_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
+		if not await self.__canTouchUser(message, command[0], userlevel_int):
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], (command[1], command[0]))
-		await self.__logGroup(message, "User [{}](tg://user?id={}) is now a `{}` one as requested by [{}](tg://user?id={}) with level `{}`".format(userToPromote, userToPromote_int, command[1], self.noncmd_getDisplayname(message.from_user), message.from_user.id, userlevel))
+		await self.__logGroup(message, "User [{}](tg://user?id={}) is now a `{}` one as requested by [{}](tg://user?id={}) with level `{}`".format(userToPromote, command[0], command[1], self.noncmd_getDisplayname(message.from_user), message.from_user.id, userlevel))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if not message.chat.type == "private":
@@ -200,6 +213,9 @@ class commandControl():
 			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, toban))
 			return False
 		
+		if not await self.__canTouchUser(message, command[0], userlevel_int):
+			return False
+		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", int(command[0])))
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, int(command[0])))
 		dbhelper.sendToPostgres(config["changelevel"], ("user", int(command[0])))
@@ -229,6 +245,9 @@ class commandControl():
 				return False
 		toban = int(command[0])
 		del command[0]
+		
+		if not await self.__canTouchUser(message, toban, userlevel_int):
+			return False
 		
 		if dbhelper.userHasLevel(toban, "banned"):
 			await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
@@ -331,11 +350,20 @@ class commandControl():
 	async def superadmins(self, client, message, userlevel, userlevel_int):
 		await self.__returnusers(message, "superadmin")
 	
+	async def viewbanreason(self, client, message, userlevel, userlevel_int):
+		if not message.chat.type == "private":
+			return False
+		
+		if dbhelper.userHasLevel(message.from_user.id, "banned"):
+			await self.mystat(client, message, userlevel, userlevel_int)
+		else:
+			await self.__reply(message, "You are not a banned one!")
+	
 	async def fbanlist(self, client, message, userlevel, userlevel_int):
 		if message.chat.type == "group":
 			return False
 		
-		output = ["id", "username", "displayname", "reason", "issued"]
+		output = ["id,username,displayname,reason,issued"]
 		banned = dbhelper.sendToPostgres(config["getusersbylevel"], ("banned",))
 		
 		for userid in banned:
@@ -343,7 +371,7 @@ class commandControl():
 			row = banned[userid]
 			for field in row:
 				line.append("\"" + field + "\"")
-			output.append(",".join(output))
+			output.append(",".join(line))
 		
 		sfile = open("fbanlist.csv", "w")
 		sfile.write("\n".join(output))

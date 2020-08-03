@@ -76,3 +76,12 @@
   - Returns your internal telegram id
   - all levels
   - private chat only
+`/removeuser <username or id>`
+  - Removes the data of a particular user
+  - level __owner__ required
+  - **NOT POSSIBLE:** to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
+  - private chat only
+`/viewbanreason`
+  - View the reason why you were banned inclusive another data we have about you
+  - only level __banned__
+  - private chat only

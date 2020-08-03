@@ -53,6 +53,7 @@ LEVEL_BANNED:
   - mydata
   - help
   - start
+  - viewbanreason
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 getuser: select * from users where id=%s;
@@ -62,7 +63,7 @@ authorizegroup: insert into groups values (%s);
 deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
 getgroup: select id from groups where id=%s;
-getusersbylevel: select id, username, comment, issuedbyid where level=%s;
+getusersbylevel: select id, username, comment, issuedbyid from users where level=%s;
 getusersbydisplayname: select id, username, displayname, level from users where displayname like %s;
 userexists: select * from users where id=%s LIMIT 1;
 resolveusername: select id, username from users where username=%s LIMIT 1;
