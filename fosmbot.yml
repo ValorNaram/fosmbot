@@ -7,6 +7,11 @@ DATABASE_DBNAME: fosm
 logchannel: -1001206244890
 daystoban: 365
 
+immunity:
+  - owner
+  - superadmin
+  - fedadmin
+
 LEVELS:
   - owner
   - superadmin
@@ -18,19 +23,21 @@ LEVEL_OWNER:
   - promote
   - demote
   - newowner
-  - testme
 
 LEVEL_SUPERADMIN:
   - addgroup
   - removegroup
-  - changeLevel
+  - changelevel
 
 LEVEL_FEDADMIN:
   - demoteme
   - fban
   - funban
   - fbanlist
-  - fstat
+  - userstat
+  - changecomment
+  - testme
+  - search
 
 LEVEL_USER:
   - fedadmins
@@ -39,23 +46,27 @@ LEVEL_USER:
 
 LEVEL_BANNED:
   - mylevel
+  - mystat
   - groupid
   - myid
+  - mydata
 
+adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
+getuser: select * from users where id=%s;
+removeuser: delete from users where id=%s;
 changeLevel: update users set level=%s where id=%s;
 authorizegroup: insert into groups values (%s);
 deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
-getusersbylevel: select id, username, displayname, comment, issuedbyid where level=%s; 
-adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
-removeuser: delete from users where id=%s;
+getgroup: select id from groups where id=%s;
+getusersbylevel: select id, username, comment, issuedbyid where level=%s;
+getusersbydisplayname: select id, username where displayname=%s;
 userexists: select * from users where id=%s LIMIT 1;
-getuserlevel: select id, level from users where id=%s LIMIT 1;
 resolveusername: select id, username from users where username=%s LIMIT 1;
 banuser: update users set level='banned' where id=%s;
 unbanuser: update users set level='user' where id=%s;
-updatedisplayname: update users set displayname=%s where id=%s;
 updatecomment: update users set comment=%s where id=%s;
+updatedisplayname: update users set displayname=%s where id=%s;
 updateissuedbyid: update users set issuedbyid=%s where id=%s;
 updatetimestamp: update users set timestamp=%s where id=%s;
 
@@ -69,4 +80,4 @@ table_users:
   - ts timestamp
 
 table_groups:
-  - id int
+  - id bigint

@@ -66,7 +66,7 @@ class helper():
 		return "error"
 	
 	def getuserlevel(self, userid):
-		output = self.sendToPostgres(self.conf["getuserlevel"], (userid,))
+		output = self.sendToPostgres(self.conf["getuser"], (userid,))
 
 		for user in output:
 			return output[user]["level"]
