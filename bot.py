@@ -63,6 +63,25 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
+	async def removedata(self, client, message, userlevel, userlevel_int):
+		if not message.chat.type == "private":
+			return False
+		
+		command = message.command
+		
+		command[0] = str(command[0])
+		userInQuestion = command[0]
+		if command[0].startswith("@"): # if true, then resolve username to telegram id
+			command[0] = dbhelper.resolveUsername(command[0])
+			if command[0].startswith("error"):
+				await self.__userNotFound(message, userInQuestion)
+				return False
+		userInQuestion_id = command[0]
+		del command[0]
+		
+		dbhelper.sendToPostgres(config["removeuser"], (userInQuestion_id,))
+		await self.__reply(message, "**Removed user** [{}](tg://user?id={}) from the known users list. A `/adduser` command does not exist but I will recreate the user for you if you forward a message from them to me!".format(userInQuestion, userInQuestion_id))
+	
 	async def help(self, client, message, userlevel, userlevel_int):
 		if not message.chat.type == "private":
 			await self.__replySilence(message, "Please issue that command in the private chat with me in order to view the help.")

@@ -23,6 +23,7 @@ LEVEL_OWNER:
   - promote
   - demote
   - newowner
+  - removedata
 
 LEVEL_SUPERADMIN:
   - addgroup
