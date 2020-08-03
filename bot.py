@@ -44,7 +44,7 @@ class commandControl():
 			await app.send_message(int(config["logchannel"]), text, disable_web_page_preview=True)
 		await self.__replySilence(message, text)
 	
-	async def __getDisplayname(self, message): # belongs to fosmbot's core
+	def __getDisplayname(self, user): # belongs to fosmbot's core
 		displayname = []
 	
 		if user.first_name: displayname.append(user.first_name)
@@ -52,35 +52,36 @@ class commandControl():
 		
 		return " ".join(displayname)
 	
-	async def createTimestamp(self): # belongs to fosmbot's core
+	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
 	async def changeLevel(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		command = message.command
 		
 		if "reply_to_message" in dir(message):
-			command[1] = message.reply_to_message.from_user.id
+			command[0] = message.reply_to_message.from_user.id
 		
 		if not len(command) == 2:
-			await self.__replySilence(message, "Syntax: `/changeLevel <level> <user>`")
+			await self.__replySilence(message, "Syntax: `/changeLevel <username> <level>`. To have `<username>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
 		
-		levelToPromoteTo_int = config["LEVELS"].index(command[0])
+		levelToPromoteTo_int = config["LEVELS"].index(command[1])
 		if not levelToPromoteTo_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
 			return False # user does not have the right to promote <user> to <level>
 		
-		userToPromote = command[1]
-		if command[1].startswith("@"): # if true, then resolve username to telegram id
-			command[1] = dbhelper.resolveUsername(command[1])
-			if command[1].startswith("error"):
+		userToPromote = command[0]
+		if command[0].startswith("@"): # if true, then resolve username to telegram id
+			command[0] = dbhelper.resolveUsername(command[0])
+			if command[0].startswith("error"):
 				await self.__userNotFound(message, userToPromote)
 		
-		userToPromote_int = config["LEVELS"].index(dbhelper.getuserlevel(command[1]))
+		userToPromote_int = config["LEVELS"].index(dbhelper.getuserlevel(command[0]))
 		if not userToPromote_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
 			return False
 		
-		dbhelper.sendToPostgres(config["changeLevel"], (command[0], int(command[1])))
+		dbhelper.sendToPostgres(config["changeLevel"], (command[1], command[0]))
+		self.__logGroup("User [{}](tg:user?id={}) is now a `{}` one as requested by [{}](tg:user?id={}) with level `{}`".format(userToPromote, userToPromote_int, command[1], self.__getDisplayname(message.from_user), userlevel))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if not message.chat.type == "private":
@@ -99,7 +100,7 @@ class commandControl():
 			command[0] = message.reply_to_message.from_user.id
 		
 		if len(command) == 0:
-			await self.__reply(message, "Syntax: `/funban <username>`")
+			await self.__reply(message, "Syntax: `/funban <username>`. To have `<username>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
 		userinput = command[0]
@@ -126,7 +127,7 @@ class commandControl():
 			command[0] = message.reply_to_message.from_user.id
 		
 		if not len(command) > 2:
-			await self.__replySilence(message, "Please provide a reason to ban a user for 365 days. Syntax: `/fban <username> <reason>".format(userToPromote))
+			await self.__replySilence(message, "Please provide a reason to ban a user for {} days. Syntax: `/fban <username> <reason>`. To have `<username>` to be automatically filled out, reply the command to a message from the user in question".format(str(config["daystoban"])))
 			return False
 		
 		userinput = command[0]
@@ -144,7 +145,7 @@ class commandControl():
 		
 		groups = dbhelper.sendToPostgres(config["getgroups"])
 		for group in groups:
-			app.kick_chat_member(group, toban, int(time.time() + 31536000)) # kick chat member and automatically unban after 365 days
+			app.kick_chat_member(group, toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 		
 		await self.__logGroup(message, "**Banned** user [{}](tg://user?id={}) from federation 'osmallgroups' for 365 days".format(userinput, toban))
 		

@@ -1,10 +1,11 @@
 DATABASE_HOST: localhost
 DATABASE_PORT: 5432
 DATABASE_USER: postgres
-DATABASE_USER_PASSWD: tz()UI1278
+DATABASE_USER_PASSWD: yourpasswd
 DATABASE_DBNAME: fosm
 
 logchannel: -1001206244890
+daystoban: 365
 
 LEVELS:
   - owner
