@@ -50,6 +50,8 @@ LEVEL_BANNED:
   - groupid
   - myid
   - mydata
+  - help
+  - start
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 getuser: select * from users where id=%s;
@@ -60,7 +62,7 @@ deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
 getgroup: select id from groups where id=%s;
 getusersbylevel: select id, username, comment, issuedbyid where level=%s;
-getusersbydisplayname: select id, username where displayname=%s;
+getusersbydisplayname: select id, username, displayname, level from users where displayname like %s;
 userexists: select * from users where id=%s LIMIT 1;
 resolveusername: select id, username from users where username=%s LIMIT 1;
 banuser: update users set level='banned' where id=%s;

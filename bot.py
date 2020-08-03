@@ -28,35 +28,57 @@ class commandControl():
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			return message.reply_to_message.from_user.id
 	async def __ownerCannotDo(self, message):
-		await message.reply("An owner cannot do this", disable_web_page_preview=True)
+		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
 	
 	async def __userNotFound(self, message, user):
-		await message.reply("User '{}' does not exist in the database".format(user), disable_web_page_preview=True, disable_notification=True)
+		await message.reply("User '{}' does not exist in the database".format(user), disable_web_page_preview=True, disable_notification=True, parse_mode="md")
 		
 	async def __reply(self, message, text): # belongs to fosmbot's core
-		await message.reply(text, disable_web_page_preview=True)
+		await message.reply(text, disable_web_page_preview=True, parse_mode="md")
 	
 	async def __replySilence(self, message, text): # belongs to fosmbot's core
-		await message.reply(text, disable_web_page_preview=True, disable_notification=True)
+		await message.reply(text, disable_web_page_preview=True, disable_notification=True, parse_mode="md")
 	
 	async def __logGroup(self, message, text): # belongs to fosmbot's core
 		if "logchannel" in config:
-			await app.send_message(int(config["logchannel"]), text, disable_web_page_preview=True)
+			await app.send_message(int(config["logchannel"]), text, disable_web_page_preview=True, parse_mode="md")
 		await self.__replySilence(message, text)
 	
 	async def __userisimmun(self, message, username, userid):
-		await self.__replySilence(message, "The user [{}](tg:user?id={}) is immun against this!".format(username, userid))
+		await self.__replySilence(message, "The user [{}](tg://user?id={}) is immun against this!".format(username, userid))
 	
-	def __getDisplayname(self, user): # belongs to fosmbot's core
+	def noncmd_getDisplayname(self, user): # belongs to fosmbot's core
 		displayname = []
 	
-		if user.first_name: displayname.append(user.first_name)
-		if user.last_name: displayname.append(user.last_name)
+		if not user.first_name is None: displayname.append(user.first_name)
+		if not user.last_name is None: displayname.append(user.last_name)
 		
+		if len(displayname) == 0:
+			if user.username is None:
+				displayname.append("Unnamed")
+			else:
+				displayname.append(user.username.replace("@", ""))
 		return " ".join(displayname)
 	
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
+	
+	async def help(self, client, message, userlevel, userlevel_int):
+		if not message.chat.type == "private":
+			await self.__replySilence(message, "Please issue that command in the private chat with me in order to view the help.")
+			return False
+		
+		if os.path.exists("help.md"):
+			sfile = open("help.md", "r")
+			filebuffer = sfile.read()
+			sfile.close()
+		
+			await self.__reply(message, filebuffer)
+		else:
+			await self.__reply(message, "**No help available**")
+	
+	async def start(self, client, message, userlevel, userlevel_int):
+		await self.help(self, client, message, userlevel, userlevel_int)
 	
 	async def mydata(self, client, message, userlevel, userlevel_int):
 		if not message.chat.type == "private":
@@ -69,7 +91,7 @@ class commandControl():
 			await self.userstat(client, message, userlevel, userlevel_int, ["issuedbyid"])
 			await self.__reply(message, "One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet. In this case the 'comment' field does not contain anything.")
 		else:
-			await self.__userNotFound(message, self.__getDisplayname(message.from_user))
+			await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
 	
 	async def changecomment(self, client, message, userlevel, userlevel_int):
 		command = message.command
@@ -92,7 +114,7 @@ class commandControl():
 		del command[0]
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), int(userInQuestion_id)))
-		await message.reply("Comment about [{}](tg:user?id={}) changed".format(userInQuestion, str(userInQuestion_id)))
+		await self.__reply(message, "Comment about [{}](tg://user?id={}) changed".format(userInQuestion, str(userInQuestion_id)))
 	
 	async def testme(self, client, message, userlevel, userlevel_int):
 		await self.__replySilence(message, "Tested me!")
@@ -125,7 +147,7 @@ class commandControl():
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], (command[1], command[0]))
-		await self.__logGroup(message, "User [{}](tg:user?id={}) is now a `{}` one as requested by [{}](tg:user?id={}) with level `{}`".format(userToPromote, userToPromote_int, command[1], self.__getDisplayname(message.from_user), message.from_user.id, userlevel))
+		await self.__logGroup(message, "User [{}](tg://user?id={}) is now a `{}` one as requested by [{}](tg://user?id={}) with level `{}`".format(userToPromote, userToPromote_int, command[1], self.noncmd_getDisplayname(message.from_user), message.from_user.id, userlevel))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if not message.chat.type == "private":
@@ -156,7 +178,7 @@ class commandControl():
 				return False
 		
 		if not dbhelper.userHasLevel(command[0], "banned"):
-			await self.__replySilence(message, "User [{}](tg:user?id={}) hasn't been banned or they are immun against bans".format(userinput, toban))
+			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, toban))
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", int(command[0])))
@@ -167,7 +189,7 @@ class commandControl():
 		for group in groups:
 			app.unban_chat_member(group, command[0])
 		
-		await self.__logGroup(message, "**Unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'".format(userinput, command[0]))
+		await self.__logGroup(message, "**Unbanned** user [{}](tg:////user?id={}) from federation 'osmallgroups'".format(userinput, command[0]))
 	
 	async def fban(self, client, message, userlevel, userlevel_int):
 		command = message.command
@@ -190,7 +212,7 @@ class commandControl():
 		del command[0]
 		
 		if dbhelper.userHasLevel(toban, "banned"):
-			await self.__replySilence(message, "User [{}](tg:user?id={}) already banned".format(userinput, toban))
+			await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
 			return False
 		
 		toban_level = dbhelper.getuserlevel(toban)
@@ -206,12 +228,9 @@ class commandControl():
 		for group in groups:
 			app.kick_chat_member(group, toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 		
-		await self.__logGroup(message, "**Banned** user [{}](tg://user?id={}) from federation 'osmallgroups' for 365 days".format(userinput, toban))
+		await self.__logGroup(message, "**Banned** user [{}](tg:////user?id={}) from federation 'osmallgroups' for 365 days".format(userinput, toban))
 		
 	async def newowner(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
-		if not message.chat.type == "private":
-			return False
-		
 		command = message.command
 		
 		if len(command) == 0:
@@ -234,7 +253,7 @@ class commandControl():
 		
 		changeOwnerInFile(command[0])
 		config["botowner"] = command[0]
-		await self.__logGroup(message, "Ownership changed from [{}](tg://user?id={}) to [{}](tg://user?id={}). The new ownership will be ensured by a file on the server".format(self.__getDisplayname(message.from_user),  message.from_user.id, userinput, command[0]))
+		await self.__logGroup(message, "Ownership changed from [{}](tg:////user?id={}) to [{}](tg:////user?id={}). The new ownership will be ensured by a file on the server".format(self.noncmd_getDisplayname(message.from_user),  message.from_user.id, userinput, command[0]))
 	
 	async def addgroup(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -242,7 +261,7 @@ class commandControl():
 		
 		if not dbhelper.sendToPostgres(config["getgroup"], (message.chat.id,)):
 			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id,))
-			await self.__logGroup(message, "Added group [{}](tg:group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
 	
 	async def removegroup(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -250,23 +269,28 @@ class commandControl():
 		
 		if dbhelper.sendToPostgres(config["getgroup"], (message.chat.id,)):
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
-			await self.__logGroup(message, "Removed group [{}](tg:group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for this group.".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for this group.".format(message.chat.title, message.chat.id))
 	
 	async def search(self, client, message, userlevel, userlevel_int):
 		if not message.chat.type == "private":
 			return False
 		
-		output = dbhelper.sendToPostgres(config["getusersbydisplayname"], (" ".join(command),))
+		command = message.command
+		if len(command) == 0:
+			await self.__reply(message, "Syntax: `/search <display name>`")
+			return False
+		
+		output = dbhelper.sendToPostgres(config["getusersbydisplayname"], ("%" + " ".join(command) + "%",))
 		
 		users = []
 		for user in output:
 			users.append(output[user])
 		
-		output = ["Search results for users with name '{}':".format(" ".join(command))]
+		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			output.append("[{}](tg:user?id={}) - `{}`".format(user["username"], user["id"], user["id"]))
+			output.append("[{}](tg://user?id={}) (**level:** {}) - @{} (`{}`)".format(user["displayname"], user["id"], user["level"], user["username"], user["id"]))
 		
-		await self.reply(message, "\n".join(output))
+		await self.__reply(message, "\n".join(output))
 		
 	async def __returnusers(self, message, level):
 		if not message.chat.type == "private":
@@ -330,7 +354,7 @@ class commandControl():
 		for i in user:
 			user = user[i]
 		
-		output = ["[{}](tg:user?id={}):".format(user["displayname"], user["id"])]
+		output = ["[{}](tg://user?id={}):".format(user["displayname"], user["id"])]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at"}
 		for i in user:
 			label = i
@@ -409,12 +433,9 @@ if __name__ == "__main__":
 	main()
 
 def addUserToDatabase(user): # belongs to fosmbot's core
-	displayname = []
-	
-	if user.first_name: displayname.append(user.first_name)
-	if user.last_name: displayname.append(user.last_name)
-		
-	displayname = " ".join(displayname)
+	displayname = commander.noncmd_getDisplayname(user)
+	if user.username is None:
+		user.username = user.id
 		
 	if not user.is_self and not user.is_deleted and not user.is_bot and not user.is_verified and not user.is_support:
 		if not dbhelper.userExists(user.id):
@@ -453,13 +474,13 @@ async def postcommandprocessing(client, message): # belongs to fosmbot's core
 						await commander.execCommand(command, client, message, userlevel, rightlevel)
 						return True
 					else:
-						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.")
+						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
 						return False
 			
 			await commander.execCommand(command, client, message, userlevel, rightlevel)
 			return True
 	
-	await message.reply("Insufficient rights. You are: {}".format(userlevel), disable_web_page_preview=True)
+	await message.reply("Insufficient rights. You are: {}".format(userlevel), disable_web_page_preview=True, parse_mode="md")
 
 @app.on_message(pyrogram.Filters.new_chat_members)
 async def userjoins(client, message): # belongs to fosmbot's core
