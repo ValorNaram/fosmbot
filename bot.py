@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from lib import database # belongs to fosmbot's core
 from lib import dbsetup # belongs to fosmbot's core
-import logging, yaml, pyrogram, time, os # belongs to fosmbot's core
+import logging, yaml, pyrogram, time, sched, os, threading # belongs to fosmbot's core
 
+exitFlag = 0 # belongs to fosmbot's core
+threads = [] # belongs to fosmbot's core
 config = {} # belongs to fosmbot's core
 dbhelper = None # belongs to fosmbot's core
 commander = None # belongs to fosmbot's core
@@ -20,14 +22,72 @@ def readOwner(): # belongs to fosmbot's core
 	sfile.close
 	return filebuffer.replace("\n", "")
 
-class commandControl():
+def createExpireTime(creationTime): # belongs to fosmbot's core
+	expireAt = config["DATABASE_ENTRY_EXPIRE_MONTH"]
+		
+	if int(creationTime[1]) == 12:
+		creationTime[0] = int(creationTime[0])+1
+		creationTime[1] = 0
+		
+	creationTime[1] = int(creationTime[1])+expireAt
+	targettime_float = time.mktime((int(creationTime[0]), int(creationTime[1]), int(creationTime[2]),0,0,0,6,0,-1))
+	
+	return targettime_float
+
+class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	def __init__(self):
-		pass
+		threading.Thread.__init__(self)
 	
-	def __getUserInQuestion(self, message): # belongs to fosmbot's core
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			return message.reply_to_message.from_user.id
+	def isExpired(self, creationTime):
+		creationTime = str(creationTime)
+		creationTime = creationTime.split(" ")[0].split("-")
+		
+		targettime_float = createExpireTime(creationTime)
+		
+		if time.time() > targettime_float: # database entry expired
+			return True
+		return False
 	
+	def docleanup(self):
+		with dbhelper.conn:
+			with dbhelper.conn.cursor() as cursor:
+				if exitFlag == 1:
+					cursor.close()
+					return False
+				logging.info("Performing a database clean up...")
+				cursor.execute(config["dbcleanupbyts"], ("user",))
+				
+				if not cursor.description == None:
+					columns = []
+					for col in cursor.description:
+						columns.append(col.name)
+					result = [0]
+					
+					while len(result) > 0:
+						result = cursor.fetchmany(20)
+						output = dbhelper.toJSON(result, columns, cursor)
+						for user in output:
+							if exitFlag == 1:
+								logging.info("Cleaning up database interrupted, closing transaction...")
+								cursor.close()
+								return False
+							if self.isExpired(output[user]["ts"]):
+								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
+		
+		logging.info("Database clean up performed. Repeat in '{}' hour(s)".format(int(config["DATABASE_CLEANUP_HOUR"])))
+	
+	def run(self):
+		while exitFlag == 0:
+			for i in range(0, 60*60*int(config["DATABASE_CLEANUP_HOUR"])):
+				if exitFlag == 1:
+					logging.info("Database cleanup schedule canceled!")
+					return False
+				time.sleep(1)
+			
+			self.docleanup()
+		logging.info("Database cleanup stopped!")
+	
+class commandControl():
 	async def __canTouchUser(self, message, userInQuestion, issuer_level):
 		userInQuestion_level = config["LEVELS"].index(dbhelper.getuserlevel(userInQuestion))
 		if userInQuestion_level > issuer_level: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
@@ -57,9 +117,10 @@ class commandControl():
 	
 	def noncmd_getDisplayname(self, user): # belongs to fosmbot's core
 		displayname = []
-	
-		if not user.first_name is None: displayname.append(user.first_name)
-		if not user.last_name is None: displayname.append(user.last_name)
+		
+		if user is not None:
+			if not user.first_name is None: displayname.append(user.first_name)
+			if not user.last_name is None: displayname.append(user.last_name)
 		
 		if len(displayname) == 0:
 			if user.username is None:
@@ -95,8 +156,8 @@ class commandControl():
 			await self.__replySilence(message, "Please issue that command in the private chat with me in order to view the help.")
 			return False
 		
-		if os.path.exists("help.md"):
-			sfile = open("help.md", "r")
+		if os.path.exists("files/help.md"):
+			sfile = open("files/help.md", "r")
 			filebuffer = sfile.read()
 			sfile.close()
 		
@@ -119,6 +180,16 @@ class commandControl():
 			await self.__reply(message, "One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet. In this case the 'comment' field does not contain anything.")
 		else:
 			await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
+	
+	async def privacypolicy(self, client, message, userlevel, userlevel_int):
+		if os.path.exists("files/privacypolicy.md"):
+			sfile = open("files/privacypolicy.md", "r")
+			filebuffer = sfile.read()
+			sfile.close()
+		
+			await self.__reply(message, filebuffer)
+		else:
+			await self.__reply(message, "**No Privacy Policy available**")
 	
 	async def changecomment(self, client, message, userlevel, userlevel_int):
 		command = message.command
@@ -286,12 +357,17 @@ class commandControl():
 				await self.__userNotFound(message, userinput)
 				return False
 		
-		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(command[0])))
+		
+		if not dbhelper.userExists(int(command[0])):
+			await self.__userNotFound(message, userinput)
+			return False
+		
 		dbhelper.sendToPostgres(config["changelevel"], ("user", message.from_user.id))
+		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(command[0])))
 		
 		changeOwnerInFile(command[0])
-		config["botowner"] = command[0]
-		await self.__logGroup(message, "Ownership changed from [{}](tg:////user?id={}) to [{}](tg:////user?id={}). The new ownership will be ensured by a file on the server".format(self.noncmd_getDisplayname(message.from_user),  message.from_user.id, userinput, command[0]))
+		config["botowner"] = int(command[0])
+		await self.__logGroup(message, "Ownership changed from [{}](tg://user?id={}) to [{}](tg://user?id={}). The new ownership will be ensured by a file on the server".format(self.noncmd_getDisplayname(message.from_user),  message.from_user.id, userinput, command[0]))
 	
 	async def addgroup(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -326,7 +402,7 @@ class commandControl():
 		
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			output.append("[{}](tg://user?id={}) (**level:** {}) - @{} (`{}`)".format(user["displayname"], user["id"], user["level"], user["username"], user["id"]))
+			output.append("- [{}](tg://user?id={}) (**level:** {}), @{} (`{}`)".format(user["displayname"], user["id"], user["level"], user["username"], user["id"]))
 		
 		await self.__reply(message, "\n".join(output))
 		
@@ -337,9 +413,12 @@ class commandControl():
 		
 		users = dbhelper.sendToPostgres(config["getusersbylevel"], (level,))
 		for userid in users:
-			output.append(users[userid]["username"] + "\n")
+			output.append("- [{}](tg://user?id={}), @{} (`{}`)\n".format(users[userid]["displayname"], userid, users[userid]["username"], userid))
 		
-		await self.__reply(message, "- ".join(output))
+		if len(output) > 0:
+			await self.__reply(message, "- ".join(output))
+		else:
+			await self.__reply(message, "No data available!")
 	
 	async def owners(self, client, message, userlevel, userlevel_int):
 		await self.__returnusers(message, config["LEVELS"][0])
@@ -373,11 +452,11 @@ class commandControl():
 				line.append("\"" + field + "\"")
 			output.append(",".join(line))
 		
-		sfile = open("fbanlist.csv", "w")
+		sfile = open("files/fbanlist.csv", "w")
 		sfile.write("\n".join(output))
 		sfile.close()
 		
-		await message.reply_document("fbanlist.csv")
+		await message.reply_document("files/fbanlist.csv")
 	
 	async def userstat(self, client, message, userlevel, userlevel_int, exclude=[]):
 		if not message.chat.type == "private":
@@ -424,13 +503,13 @@ class commandControl():
 	
 	async def groupid(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if "chat" in dir(message) and message.chat is not None:
-			await self.__replySilence(message, "Chat id `{}`".format(str(message.chat.id)))
+			await self.__replySilence(message, "Chat id: `{}`".format(str(message.chat.id)))
 	
 	async def myid(self, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if not message.chat.type == "private":
 			return False
 		
-		await self.__replySilence(message, "Your id `{}`".format(str(message.from_user.id)))
+		await self.__replySilence(message, "Your id: `{}`".format(str(message.from_user.id)))
 		
 	async def execCommand(self, command, client, message, userlevel, userlevel_int): # belongs to fosmbot's core
 		if not command[0].startswith("__") or not command[0].startswith("noncmd"):
@@ -442,7 +521,7 @@ def main(): # belongs to fosmbot's core
 	global config, dbhelper, commander, allcommands, app
 	
 	config = {}
-	logging.basicConfig(format='[osmallgroups Bot]: %(asctime)s %(message)s', level=logging.DEBUG, datefmt="%m/%d/%Y %I:%M:%S %p")
+	logging.basicConfig(format='[fosmbot]: %(asctime)s %(message)s', level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S %p")
 	app = pyrogram.Client("fosm")
 	
 	logging.info("loading 'fosmbot.yml' configuration...")
@@ -454,8 +533,8 @@ def main(): # belongs to fosmbot's core
 	for level in config["LEVELS"]:
 		for command in config["LEVEL_" + level.upper()]:
 			allcommands.append(command)
+	logging.info("Available in-chat commands '{}'".format(", ".join(allcommands)))
 	
-	logging.info(allcommands)
 	if not "dbconnstr" in config:
 		logging.info("generating 'dbconnstr'...")
 		config["dbconnstr"] = "host={} port={} user={} password={} dbname={}".format(config["DATABASE_HOST"], config["DATABASE_PORT"], config["DATABASE_USER"], config["DATABASE_USER_PASSWD"], config["DATABASE_DBNAME"])
@@ -479,26 +558,27 @@ def main(): # belongs to fosmbot's core
 if __name__ == "__main__":
 	main()
 
-def addUserToDatabase(user): # belongs to fosmbot's core
+def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	displayname = commander.noncmd_getDisplayname(user)
 	if user.username is None:
 		user.username = user.id
-		
+	
 	if not user.is_self and not user.is_deleted and not user.is_bot and not user.is_verified and not user.is_support:
-		if not dbhelper.userExists(user.id):
+		userexists = dbhelper.userExists(user.id)
+		if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
 			dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
-		else:
+		elif userexists:
 			dbhelper.sendToPostgres(config["updatedisplayname"], (displayname, user.id))
+			
 	
 	if user.id == config["botowner"]:
 		if not dbhelper.userHasLevel(config["botowner"], config["LEVELS"][0]):
-			logging.info("  setting user '{}' ({}) as owner".format(displayname, user.id))
 			dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(config["botowner"])))
+			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
 
 @app.on_message(pyrogram.Filters.command(allcommands))
 async def postcommandprocessing(client, message): # belongs to fosmbot's core
-	print("##################################################################################################") # Kept for debugging purpose
-	addUserToDatabase(message.from_user)
+	addUserToDatabase(message.chat.type, message.from_user)
 	command = message.command
 	if command is str:
 		command = [command]
@@ -536,15 +616,31 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		newmembers = [newmembers]
 	
 	for member in newmembers:
-		addUserToDatabase(member)
+		addUserToDatabase(message.chat.type, member)
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
-	addUserToDatabase(message.from_user)
+	addUserToDatabase(message.chat.type, message.from_user)
 	
 	if "forward_from" in dir(message) and message.forward_from is not None:
-		addUserToDatabase(message.forward_from)
+		addUserToDatabase(message.chat.type, message.forward_from)
 
 if __name__ == "__main__":
+	logging.info("Scheduling database cleanup...")
+	clean = dbcleanup()
+	clean.start()
+	threads.append(clean)
+	
 	logging.info("starting fosmbot...")
 	app.run()
+	
+	logging.info("Bot stopped! Stopping database cleanup...")
+	exitFlag = 1
+	for i in threads:
+		i.join()
+	
+	logging.info("Closing connection to database...")
+	dbhelper.tearDown()
+	
+	logging.info("All operations stopped! Bye, see you soon :)")
+	
