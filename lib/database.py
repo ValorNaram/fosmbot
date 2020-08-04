@@ -10,10 +10,14 @@ class helper():
 		self.lock = False
 		self.canShutdown = True
 	
-	def __toJSON(self, table, columns, curs):
+	def toJSON(self, table, columns, curs):
+		return self.__toJSON(table, columns, curs)
+	
+	def __toJSON(self, table, columns, curs): # for backward compactibility
 		data = {}
 		if curs.rowcount == 0:
 			return data
+		
 		for row in table:
 			col = {}
 			ident = ""
@@ -48,6 +52,14 @@ class helper():
 	
 	def userHasLevel(self, userid, level):
 		if self.userExists(userid):
+			result = self.getuserlevel(userid)
+			
+			if result.startswith("error"):
+				if level == self.conf["LEVELS"][len(config["LEVELS"])-1]:
+					return True
+				else:
+					return False
+			
 			if self.getuserlevel(userid) == level:
 				return True
 		return False
@@ -63,11 +75,13 @@ class helper():
 			for user in output:
 				return str(user)
 		
-		return "error"
+		return "error - user not existing"
 	
 	def getuserlevel(self, userid):
 		output = self.sendToPostgres(self.conf["getuser"], (userid,))
-
+		
+		if len(output) == 0:
+			return "error - user not existing"
 		for user in output:
 			return output[user]["level"]
 	
@@ -85,6 +99,34 @@ class helper():
 				output.append(row[0])
 		
 		return output
+	def getCursor(self, query, params=()):
+		if self.lock == True:
+			return None
+		
+		cur = self.conn.cursor()
+		if params == ():
+			cur.execute(query)
+		else:
+			cur.execute(query, params)
+		
+		return cur
+	
+	def getOneRow(self, cursor):
+		if self.lock == True:
+			self.closeCursor(cursor)
+			return None
+		
+		columns = []
+		if not cursor.description == None:
+			for col in cursor.description:
+				columns.append(col.name)
+		result = cursor.fetchone()
+		if result == None:
+			return None
+		return self.__toJSON([result], columns, cursor)
+	
+	def closeCursor(self, cursor):
+		cursor.close()
 	
 	def sendToPostgres(self, query, params=(), limit=20):
 		if self.lock == False:

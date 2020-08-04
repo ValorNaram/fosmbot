@@ -411,9 +411,15 @@ class commandControl():
 			return False
 		output = []
 		
-		users = dbhelper.sendToPostgres(config["getusersbylevel"], (level,))
-		for userid in users:
-			output.append("- [{}](tg://user?id={}), @{} (`{}`)\n".format(users[userid]["displayname"], userid, users[userid]["username"], userid))
+		user = True
+		cursor = dbhelper.getCursor(config["getusersbylevel"], (level,))
+		while user is not None:
+			user = dbhelper.getOneRow(cursor)
+			if user == None:
+				break
+			for userid in user:
+				output.append("- [{}](tg://user?id={}), @{} (`{}`)\n".format(user[userid]["displayname"], userid, user[userid]["username"], userid))
+		dbhelper.closeCursor(cursor)
 		
 		if len(output) > 0:
 			await self.__reply(message, "- ".join(output))
@@ -443,14 +449,20 @@ class commandControl():
 			return False
 		
 		output = ["id,username,displayname,reason,issued"]
-		banned = dbhelper.sendToPostgres(config["getusersbylevel"], ("banned",))
 		
-		for userid in banned:
-			line = []
-			row = banned[userid]
-			for field in row:
-				line.append("\"" + field + "\"")
-			output.append(",".join(line))
+		banned = True
+		cursor = dbhelper.getCursor(config["getusersbylevel"], ("banned",))
+		while banned is not None:
+			banned = dbhelper.getOneRow(cursor)
+			if banned == None:
+				break
+			for userid in banned:
+				line = []
+				row = banned[userid]
+				for field in row:
+					line.append("\"" + field + "\"")
+				output.append(",".join(line))
+		dbhelper.closeCursor(cursor)
 		
 		sfile = open("files/fbanlist.csv", "w")
 		sfile.write("\n".join(output))
@@ -585,6 +597,9 @@ async def postcommandprocessing(client, message): # belongs to fosmbot's core
 		message.command = [message.command]
 	
 	userlevel = dbhelper.getuserlevel(message.from_user.id)
+	if userlevel.startswith("error"):
+		userlevel = config["LEVELS"][len(config["LEVELS"])-1]
+	
 	rightlevel = config["LEVELS"].index(userlevel)
 	
 	for i in range(rightlevel, len(config["LEVELS"])):
