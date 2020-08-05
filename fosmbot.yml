@@ -58,14 +58,14 @@ LEVEL_BANNED:
   - viewbanreason
   - privacypolicy
 
-adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
+adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '');
 getuser: select * from users where id=%s;
 getuserbyusername: select * from users where username=%s LIMIT 1;
 getusersbylevel: select * from users where level=%s;
 getusersbydisplayname: select * from users where displayname like %s;
 removeuser: delete from users where id=%s;
 changelevel: update users set level=%s where id=%s;
-authorizegroup: insert into groups values (%s);
+authorizegroup: insert into groups values (%s, %s);
 deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
 getgroup: select id from groups where id=%s;
@@ -75,6 +75,7 @@ updatecomment: update users set comment=%s where id=%s;
 updatedisplayname: update users set displayname=%s where id=%s;
 updateissuedbyid: update users set issuedbyid=%s where id=%s;
 updatetimestamp: update users set timestamp=%s where id=%s;
+updategroups: update users set groups=%s where id=%s;
 dbcleanupbyts: select id, ts from users where level=%s;
 
 table_users:
@@ -85,6 +86,8 @@ table_users:
   - comment text
   - issuedbyid int
   - ts timestamp
+  - groups text
 
 table_groups:
   - id bigint
+  - username text

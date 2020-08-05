@@ -95,6 +95,53 @@ class commandControl():
 			return True
 		await self.__replySilence(message, "You don't have the necessary rights to touch the user!")
 		return False
+	def noncmd_getChatUsername(self, message):
+		username = ""
+		if "username" in dir(message.chat) and message.chat.username is not None:
+			username = message.chat.username
+		else:
+			username = str(message.chat.id)
+		
+		return username.lower()
+	
+	async def __performBan(self, toban, issuer, targetuserdata):
+		print(targetuserdata, i)
+		for i in targetuserdata:
+			targetuserdata = targetuserdata[i]
+		
+		groups = targetuserdata["groups"]
+		for group in groups.split(","):
+			group = group.split(" ")
+			try:
+				await app.kick_chat_member(int(group[0]), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+			except:
+				try:
+					app.send_message(int(group[0]), "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+				except:	
+					pass
+		
+		for i in targetuserdata:
+			targetuserdata = targetuserdata[i]
+		await self.__logGroup(message, "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups' for 365 days".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+	
+	async def __performUnban(self, toban, issuer, targetuserdata):
+		for i in targetuserdata:
+			targetuserdata = targetuserdata[i]
+		
+		groups = targetuserdata["groups"]
+		for group in groups.split(","):
+			group = group.split(" ")
+			try:
+				await app.unban_chat_member(int(group[0]), toban)
+			except:
+				try:
+					app.send_message(int(group[0]), "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+				except:	
+					pass
+		
+		for i in targetuserdata:
+			targetuserdata = targetuserdata[i]
+		await self.__logGroup(message, "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'.".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
 	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
@@ -313,18 +360,11 @@ class commandControl():
 			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, toban))
 			return False
 		
-		if not await self.__canTouchUser(message, command[0], userlevel_int, targetuserdata):
-			return False
-		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", int(command[0])))
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, int(command[0])))
 		dbhelper.sendToPostgres(config["changelevel"], ("user", int(command[0])))
 		
-		groups = dbhelper.sendToPostgres(config["getgroups"])
-		for group in groups:
-			await app.unban_chat_member(group, command[0])
-		
-		await self.__logGroup(message, "**Unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'".format(userinput, command[0]))
+		self.__performUnban(toban, userdata, targetuserdata)
 	
 	async def fban(self, client, message, userlevel, userlevel_int, userdata):
 		targetuserdata = {}
@@ -368,13 +408,7 @@ class commandControl():
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, toban))
 		dbhelper.sendToPostgres(config["changelevel"], ("banned", toban))
 		
-		groups = dbhelper.sendToPostgres(config["getgroups"])
-		for group in groups:
-			await app.kick_chat_member(group, toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-		
-		for i in targetuserdata:
-			targetuserdata = targetuserdata[i]
-		await self.__logGroup(message, "**Banned** user [{}](tg://user?id={}) from federation 'osmallgroups' for 365 days".format(targetuserdata["displayname"], toban))
+		await self.__performBan(toban, userdata, targetuserdata)
 		
 	async def newowner(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		targetuserdata = {}
@@ -418,7 +452,8 @@ class commandControl():
 		
 		out = dbhelper.sendToPostgres(config["getgroup"], (message.chat.id,))
 		if len(out) == 0:
-			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id,))
+			username = self.noncmd_getChatUsername(message)
+			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id, username))
 			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
 	
 	async def removegroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
@@ -428,7 +463,7 @@ class commandControl():
 		out = dbhelper.sendToPostgres(config["getgroup"], (message.chat.id,))
 		if len(out) > 0:
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
-			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for this group.".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat.title, message.chat.id))
 	
 	async def search(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
@@ -627,7 +662,9 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	
 	if not user.is_self and not user.is_deleted and not user.is_bot and not user.is_support:
 		userexists, out = dbhelper.userExists(user.id)
-		if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
+		if not userexists and user.id == config["botowner"]:
+			dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
+		elif not userexists and not chat == "private" and not chat == "channel":
 			dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
 			canReturn = True
 		elif userexists:
@@ -635,13 +672,12 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			canReturn = True
 	
 	if not canReturn:
-		out = {user.id: {"id": user.id, "username": str(user.username), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "ts": commander.createTimestamp(), "pseudoProfile": True}}
-	
+		out = {user.id: {"id": user.id, "username": str(user.username), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": "", "ts": commander.createTimestamp(), "pseudoProfile": True}}
 	if user.id == config["botowner"]:
 		if not dbhelper.userHasLevel(config["botowner"], config["LEVELS"][0], out):
 			dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(config["botowner"])))
-			canReturn = True
-			out[user.id]["level"] = config["LEVELS"][0]
+			if len(out) > 1:
+				out[user.id]["level"] = config["LEVELS"][0]
 			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
 	
 	return out
@@ -682,7 +718,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 	
 	out = ["Insufficient rights. You are: {}".format(userlevel)]
 	if "pseudoProfile" in user:
-		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet")
+		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet!")
 	await message.reply("\n".join(out), disable_web_page_preview=True, parse_mode="md")
 
 @app.on_message(pyrogram.Filters.new_chat_members)
@@ -692,7 +728,47 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		newmembers = [newmembers]
 	
 	for member in newmembers:
-		addUserToDatabase(message.chat.type, member)
+		user = addUserToDatabase(message.chat.type, member)
+		
+		if message.chat.type == "channel" or not dbhelper.isAuthorizedGroup(message.chat.id):
+			continue
+		
+		for i in user:
+			user = user[i]
+		
+		groups = user["groups"].split(",")
+		username = commander.noncmd_getChatUsername(message)
+			
+		groups.append(str(message.chat.id) + " " + username)
+		
+		dbhelper.sendToPostgres(config["updategroups"], (",".join(groups), user["id"]))
+
+@app.on_message(pyrogram.Filters.left_chat_member)
+async def userleave(client, message):
+	user = dbhelper.sendToPostgres(config["getuser"], message.left_chat_member.id)
+	if len(user) == 0:
+		return False
+	for i in user:
+		user = user[i]
+	
+	if message.chat.type == "channel":
+		return False
+	
+	for i in user:
+		user = user[i]
+	
+	groups = user["groups"].split(",")
+	
+	if len(groups) == 0 or len(groups[0]) == 1:
+		return False
+	
+	group2 = []
+	for group in groups:
+		group = group.split(" ")
+		if not int(group[0]) == message.chat.id:
+			group2.append(" ".join(group))
+	
+	dbhelper.sendToPostgres(config["updategroups"], (",".join(groups2), user["id"]))
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
@@ -702,6 +778,32 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 		if not "pseudoProfile" in user:
 			message.chat.type = "group"
 		addUserToDatabase(message.chat.type, message.forward_from)
+	
+	if message.chat.type == "channel" or message.chat.type == "private" or not dbhelper.isAuthorizedGroup(message.chat.id):
+		return False
+	
+	for i in user:
+		user = user[i]
+	
+	groups = user["groups"].split(",")
+	groups2 = []
+	changes = False
+	for group in groups:
+		group = group.split(" ")
+		username = commander.noncmd_getChatUsername(message)
+		if len(group) == 1:
+			groups2.append(str(message.chat.id) + " " + username)
+			changes = True
+			continue
+		if int(group[0]) == message.chat.id and not group[1] == username:
+			changes = True
+			groups2.append(str(group[0]) + " " + username)
+		else:
+			groups2.append(" ".join(group))
+		print(group)
+	
+	if changes:
+		dbhelper.sendToPostgres(config["updategroups"], (",".join(groups2) , user["id"]))
 
 if __name__ == "__main__":
 	logging.info("Scheduling database cleanup...")

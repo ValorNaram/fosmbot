@@ -3,13 +3,14 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
 from psycopg2 import sql
 import psycopg2
-class helper():
+
+class helper(): # thread safe
 	def __init__(self, conf):
 		self.conf = conf
 		self.conn = psycopg2.connect(conf["dbconnstr"])
 		self.lock = False
 		self.canShutdown = True
-	
+			
 	def toJSON(self, table, columns, curs):
 		return self.__toJSON(table, columns, curs)
 	
@@ -51,6 +52,12 @@ class helper():
 			return result, out
 		cur.close()
 		return result, {}
+	
+	def isAuthorizedGroup(self, groupid):
+		output = self.sendToPostgres(self.conf["getgroup"], (groupid,))
+		if len(output) > 0:
+			return True
+		return False
 	
 	def userHasLevel(self, userid, level, data={}):
 		if self.userExists(userid, data):
@@ -146,7 +153,7 @@ class helper():
 			pass
 		self.conn.close()
 
-class management():
+class management(): # not thread safe
 	def __init__(self, dbconnstr):
 		self.error = ""
 		try:
