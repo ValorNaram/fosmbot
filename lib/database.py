@@ -28,77 +28,67 @@ class helper():
 			data[ident] = col
 		return data
 	
-	def modifyUser(self, userid, name, param):
-		output = ""
-		if name in self.conf:
-			query = self.conf[name]
-			cur = self.conn.cursor()
-			output = cur.mogrify(query, (param, userid)).decode("utf-8")
-			cur.close()
-		return output
-	
-	def userExists(self, userid):
+	def userExists(self, userid, data={}):
+		if userid in data:
+			return True
+		
 		result = False
-		query = self.conf["userexists"]
 		cur = self.conn.cursor()
 		
-		cur.execute(query, (userid,))
+		cur.execute(self.conf["getuser"], (userid,))
 		if cur.rowcount == 1:
 			result = True
 		else:
 			result = False
+		
+		if result:
+			if not cur.description == None:
+				columns = []
+				for col in cur.description:
+					columns.append(col.name)
+			out = self.toJSON([cur.fetchone()], columns, cur)
+			cur.close()
+			return result, out
 		cur.close()
-		return result
+		return result, {}
 	
-	def userHasLevel(self, userid, level):
-		if self.userExists(userid):
-			result = self.getuserlevel(userid)
+	def userHasLevel(self, userid, level, data={}):
+		if self.userExists(userid, data):
+			result, data = self.getuserlevel(userid, data)
 			
 			if result.startswith("error"):
-				if level == self.conf["LEVELS"][len(config["LEVELS"])-1]:
+				if level == self.conf["LEVELS"][len(self.conf["LEVELS"])-1]:
 					return True
 				else:
 					return False
 			
-			if self.getuserlevel(userid) == level:
+			if result == level:
 				return True
 		return False
 	
-	def resolveUsername(self, username):
+	def resolveUsername(self, username, output={}):
 		if username is int or username is float:
-			return username
+			return username, output
 		
-		query = self.conf["resolveusername"]
-		output = self.sendToPostgres(query, (username.replace("@", ""),))
-		
-		if len(output) > 0:
-			for user in output:
-				return str(user)
-		
-		return "error - user not existing"
-	
-	def getuserlevel(self, userid):
-		output = self.sendToPostgres(self.conf["getuser"], (userid,))
+		username = username.lower()
 		
 		if len(output) == 0:
-			return "error - user not existing"
-		for user in output:
-			return output[user]["level"]
+			output = self.sendToPostgres(self.conf["getuserbyusername"], (username.replace("@", ""),))
+		if len(output) > 0:
+			for user in output:
+				return str(user), output
+		
+		return "error - user not existing", {}
 	
-	def tableSchema(self, tablename):
-		output = []
-		query = "select column_name from information_schema.columns where table_name=%s;"
+	def getuserlevel(self, userid, output={}):
+		if len(output) == 0:
+			output = self.sendToPostgres(self.conf["getuser"], (userid,))
 		
-		cur = self.conn.cursor()
-		cur.execute(query, (tablename,))
-		data = cur.fetchall()
-		cur.close()
-		
-		for row in data:
-			if not row[0] == "id":
-				output.append(row[0])
-		
-		return output
+		if len(output) == 0:
+			return "error - user not existing", {}
+		for user in output:
+			return output[user]["level"], output
+	
 	def getCursor(self, query, params=()):
 		if self.lock == True:
 			return None

@@ -60,16 +60,15 @@ LEVEL_BANNED:
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s);
 getuser: select * from users where id=%s;
+getuserbyusername: select * from users where username=%s LIMIT 1;
+getusersbylevel: select * from users where level=%s;
+getusersbydisplayname: select * from users where displayname like %s;
 removeuser: delete from users where id=%s;
 changelevel: update users set level=%s where id=%s;
 authorizegroup: insert into groups values (%s);
 deauthorizegroup: delete from groups where id=%s;
 getgroups: select id from groups;
 getgroup: select id from groups where id=%s;
-getusersbylevel: select id, username, displayname, comment, issuedbyid from users where level=%s;
-getusersbydisplayname: select id, username, displayname, level from users where displayname like %s;
-userexists: select * from users where id=%s LIMIT 1;
-resolveusername: select id, username from users where username=%s LIMIT 1;
 banuser: update users set level='banned' where id=%s;
 unbanuser: update users set level='user' where id=%s;
 updatecomment: update users set comment=%s where id=%s;
