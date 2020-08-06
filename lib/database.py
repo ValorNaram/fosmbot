@@ -53,11 +53,16 @@ class helper(): # thread safe
 		cur.close()
 		return result, {}
 	
-	def isAuthorizedGroup(self, groupid):
-		output = self.sendToPostgres(self.conf["getgroup"], (groupid,))
-		if len(output) > 0:
-			return True
-		return False
+	def isAuthorizedGroup(self, groupid, output=None):
+		if output == None:
+			output = self.sendToPostgres(self.conf["getgroup"], (groupid,))
+			if len(output) > 0:
+				return True
+			return False
+		else:
+			if groupid in output:
+				return True
+			return False
 	
 	def userHasLevel(self, userid, level, data={}):
 		if self.userExists(userid, data):

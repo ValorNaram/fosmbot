@@ -8,6 +8,10 @@
   - Returns the data we have about you saved in our database
   - all levels
   - private chat only
+`/testme`
+  - Returns a text
+  - all levels
+  - all chats
 `/privacypolicy`
   - Returns a notice about how we collect data.
   - all levels
@@ -15,9 +19,11 @@
 `/changecomment <username or id> <comment>`
   - Changes the comment about a user we have in our database
   - level __fedadmin__ or higher required
+  - all chats
 `/changelevel <username or id> <level>`
   - Set the user's level to __level__
   - level __superadmin__ or higher required
+  - all levels
 `/demoteme`
   - Demote yourself to a user (level __user__). You loose your federation rights.
   - level __fedadmin__ or higher required
@@ -25,21 +31,26 @@
 `/funban <username or id>`
   - Unban a previously banned user
   - level __fedadmin__ or higher required
+  - all chats
   - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
 `/fban <username or id> <comment>`
   - Ban a user with a reason (=comment)
   - level __fedadmin__ or higher required
+  - all chats
   - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
 `/newowner <username or id>`
   - Transfer Ownership to another user. The new user then can do everything the previous owner could do. The previous owner gets demoted to the level __owner__
   - level __owner__ required
+  - all chats
   - **NOT POSSIBLE:** to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
 `/addgroup`
   - Add the group this command has been sent from to the federation "osmallgroups"
   - level __superadmin__ or higher required
+  - only groups
 `/removegroup`
   - Remove the group this command has been sent from from the federation "osmallgroups"
   - level __superadmin__ or higher required
+  - only groups
 `/search <display name>`
   - Prints out all users (telegram id inclusive) this Bot knows and having the specified display name
   - level __fedadmin__ or higher required
@@ -59,11 +70,11 @@
 `/fbanlist`
   - Returns a csv document containing all banned users.
   - level __fedadmin__ or higher required
-  - **not** supported in groups
+  - all chats
 `/userstat <username or id>`
   - Returns data about a known user (from all levels)
   - level __fedadmin__ or higher required
-  - private chat only
+  - all chats
 `/mystat`
   - Returns data about yourself
   - all levels
@@ -87,5 +98,5 @@
   - private chat only
 `/viewbanreason`
   - View the reason why you were banned inclusive another data we have about you
-  - only level __banned__
+  - makes only sense when you has been banned
   - private chat only
