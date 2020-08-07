@@ -628,7 +628,13 @@ class commandControl():
 			return False
 		
 		await self.__replySilence(message, "Your id: `{}`".format(str(message.from_user.id)))
-		
+	
+	async def groupauthorized(self, client, message, userlevel, userlevel_int, userdata):  # belongs to fosmbot's core
+		if message.chat.id in config["groupslist"]:
+			await self.__replySilence(message, "This group is an authorized one!")
+		else:
+			await self.__replySilence(message, "This group is **not** an authorized one!")
+	
 	async def execCommand(self, command, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if not command[0].startswith("__") or not command[0].startswith("noncmd"):
 			func = message.command[0]

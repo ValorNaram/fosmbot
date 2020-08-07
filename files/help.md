@@ -91,6 +91,14 @@
   - Returns your internal telegram id
   - all levels
   - private chat only
+`/viewgroups`
+  - Returns a list of participating groups
+  - level __fedadmin__ or higher required.
+  - private chat only
+`/groupauthorized`
+  - Returns if a group is authorized. If it does not return anything, then the bot isn't active in the group you typed that command in.
+  - all levels
+  - all chats but useful in groups only
 `/removeuser <username or id>`
   - Removes the data of a particular user
   - level __owner__ required
