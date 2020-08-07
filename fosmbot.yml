@@ -1,4 +1,4 @@
-DATABASE_HOST: localhost
+DATABASE_HOST: db
 DATABASE_PORT: 5432
 DATABASE_USER: postgres
 DATABASE_USER_PASSWD: mypasswd
@@ -39,7 +39,7 @@ LEVEL_FEDADMIN:
   - fbanlist
   - userstat
   - changecomment
-  - testme
+  - viewgroups
   - search
 
 LEVEL_USER:

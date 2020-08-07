@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  fosmbot:
+    build: .
+    restart: always
+  
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: mypasswd
+    

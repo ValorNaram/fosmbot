@@ -113,7 +113,6 @@ class commandControl():
 		for group in targetuserdata["groups"]:
 			try:
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-				pass
 			except:
 				try:
 					app.send_message(int(group), "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
@@ -178,6 +177,20 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
+	async def viewgroups(self, client, message, userlevel, userlevel_int, userdata):
+		if not message.chat.type == "private":
+			return False
+		
+		groups = config["groupslist"]
+		out = []
+		
+		for i in groups:
+			group = groups[i]
+			out.append("- {} (`{}`)".format("@" + str(group["id"]), str(i)))
+		out.append("\n**{} groups** participate in the federation".format(str(len(groups))))
+		
+		await self.__reply(message, "\n".join(out))
+		
 	async def removedata(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
 			return False
@@ -696,7 +709,6 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 				out[user.id]["level"] = config["LEVELS"][0]
 			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
 	
-	print(canReturn, out) # debug
 	return out
 
 def addToGroup(message, user):
@@ -763,7 +775,6 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		if user["level"] == "banned" and not message.chat.type == "channel":
 			try:
 				await app.kick_chat_member(int(message.chat.id), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-				pass
 			except:
 				app.send_message(int(group), "User [{}](tg://user?id={}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user["displayname"], user["id"]))
 			return False
