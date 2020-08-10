@@ -4,10 +4,15 @@ services:
   fosmbot:
     build: .
     restart: always
+    depends_on:
+      - db
   
   db:
     image: postgres
     restart: always
     environment:
       POSTGRES_PASSWORD: mypasswd
+      PGDATA: /var/lib/postgresql/data/pgdata
     
+    volumes:
+      - ./app/db:/var/lib/postgresql/data/pgdata

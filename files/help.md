@@ -108,3 +108,5 @@
   - View the reason why you were banned inclusive another data we have about you
   - makes only sense when you has been banned
   - private chat only
+
+It's all FOSS --> https://github.com/valornaram/fosmbot

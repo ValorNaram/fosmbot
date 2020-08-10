@@ -691,14 +691,16 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	displayname = commander.noncmd_getDisplayname(user)
 	canReturn = False
 	out = {}
+	userexists, out = dbhelper.userExists(user.id)
 	if user.username is None:
 		user.username = str(user.id)
 	
-	if not user.is_self and not user.is_deleted and not user.is_bot and not user.is_support:
-		userexists, out = dbhelper.userExists(user.id)
-		if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
-			dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
-		elif userexists:
+	if user.is_self or user.is_deleted or user.is_bot or user.is_support:
+		return out
+	
+	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
+		dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
+	elif userexists:
 			dbhelper.sendToPostgres(config["updatedisplayname"], (displayname, user.id))
 			canReturn = True
 	
@@ -725,6 +727,9 @@ def addToGroup(message, user):
 @app.on_message(pyrogram.Filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
 	user = addUserToDatabase(message.chat.type, message.from_user)
+	if len(user) == 0:
+		return False
+	
 	command = message.command
 	if command is str:
 		command = [command]
@@ -769,7 +774,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 	
 	for member in newmembers:
 		user = addUserToDatabase(message.chat.type, member)
-		if user is None:
+		if len(user) == 0:
 			continue
 		
 		if message.chat.type == "channel" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
