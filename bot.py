@@ -146,10 +146,20 @@ class commandControl():
 		await message.reply("User '{}' does not exist in the database".format(user), disable_web_page_preview=True, disable_notification=True, parse_mode="md")
 		
 	async def __reply(self, message, text): # belongs to fosmbot's core
-		await message.reply(text, disable_web_page_preview=True, parse_mode="md")
+		start = 0
+		stop = 4096
+		while len(text) > start:
+			await message.reply(text[start:stop], disable_web_page_preview=True, parse_mode="md")
+			stop += 4096
+			start += 4096
 	
 	async def __replySilence(self, message, text): # belongs to fosmbot's core
-		await message.reply(text, disable_web_page_preview=True, disable_notification=True, parse_mode="md")
+		start = 0
+		stop = 4096
+		while len(text) > start:
+			await message.reply(text, disable_web_page_preview=True, disable_notification=True, parse_mode="md")
+			stop += 4096
+			start += 4096
 	
 	async def __logGroup(self, message, text): # belongs to fosmbot's core
 		if "logchannel" in config:
@@ -687,7 +697,7 @@ if __name__ == "__main__":
 
 def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if user is None:
-		return False
+		return {}
 	displayname = commander.noncmd_getDisplayname(user)
 	canReturn = False
 	out = {}
@@ -813,7 +823,7 @@ async def userleave(client, message):
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
 	user = addUserToDatabase(message.chat.type, message.from_user)
-	if user is None:
+	if len(user) == 0:
 		return False
 	
 	for i in user:
