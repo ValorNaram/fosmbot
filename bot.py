@@ -526,7 +526,7 @@ class commandControl():
 			if user == None:
 				break
 			for userid in user:
-				output.append("- [{}](tg://user?id={}), @{} (`{}`)\n".format(user[userid]["displayname"], userid, user[userid]["username"], userid))
+				output.append("- [{}](tg://user?id={}), @{} (`{}`)".format(user[userid]["displayname"], userid, user[userid]["username"], userid))
 		dbhelper.closeCursor(cursor)
 		
 		if len(output) > 0:
