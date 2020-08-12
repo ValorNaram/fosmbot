@@ -196,7 +196,7 @@ class commandControl():
 		
 		for i in groups:
 			group = groups[i]
-			out.append("- {} (`{}`)".format("@" + str(group["id"]), str(i)))
+			out.append("- {} (`{}`)".format("@" + str(group["username"]), str(i)))
 		out.append("\n**{} groups** participate in the federation".format(str(len(groups))))
 		
 		await self.__reply(message, "\n".join(out))
@@ -530,7 +530,7 @@ class commandControl():
 		dbhelper.closeCursor(cursor)
 		
 		if len(output) > 0:
-			await self.__reply(message, "- ".join(output))
+			await self.__reply(message, "\n".join(output))
 		else:
 			await self.__reply(message, "No data available!")
 	
