@@ -6,7 +6,7 @@
 
 add the bot to your group, make it admin, start a chat with the bot.
 
-Type `/start` or `/help` in the [chat with the bot](https.//t.me/fosmbot) to view a list of available commands
+Type `/start` or `/help` in the [chat with the bot](https://t.me/fosmbot) to view a list of available commands
 
 ## Motivation
 
@@ -24,7 +24,7 @@ Some OSM groups started experimenting with the Rose bot, to keep scamming under 
 Along with other features:
 
 * Banned users can chat with the bot in private and request the reason behind their ban.
-* Users can view the data the bot stores about them with the /mydata command in private.
+* Users can view the data the bot stores about them with the `/mydata` command in private.
 * It allows to view the groups using this bot and which are also authorized to use it.
 * It provides a simpler interface than Rose and behaves more than we would expect.
 * It allows us to add more fedadmins then Rose does.
@@ -34,4 +34,4 @@ Along with other features:
 
 ## Further information
 
-Ping [@valornaram](https://t.me/valornaram) for questions or to ask him to unlock the Bot for your group. The Bot only works for explicityl unlocked groups.
+Ping [@valornaram](https://t.me/valornaram) for questions or to ask him to unlock the Bot for your group. The Bot only works for explicitly unlocked groups.
