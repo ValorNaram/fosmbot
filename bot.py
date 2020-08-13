@@ -115,7 +115,7 @@ class commandControl():
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
 				try:
-					app.send_message(int(group), "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+					await app.send_message(int(group), "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
 				except:	
 					pass
 		
@@ -133,7 +133,7 @@ class commandControl():
 				await app.unban_chat_member(int(group), toban)
 			except:
 				try:
-					app.send_message(int(group), "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+					await app.send_message(int(group), "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
 				except:	
 					pass
 		
@@ -797,13 +797,13 @@ async def userjoins(client, message): # belongs to fosmbot's core
 			try:
 				await app.kick_chat_member(int(message.chat.id), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
-				app.send_message(int(group), "User [{}](tg://user?id={}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user["displayname"], user["id"]))
+				await app.send_message(int(group), "User [{}](tg://user?id={}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user["displayname"], user["id"]))
 			return False
 		addToGroup(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleave(client, message):
-	user = dbhelper.sendToPostgres(config["getuser"], message.left_chat_member.id)
+	user = dbhelper.sendToPostgres(config["getuser"], (message.left_chat_member.id,))
 	if len(user) == 0:
 		return False
 	for i in user:
