@@ -74,7 +74,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 							if self.isExpired(output[user]["ts"]):
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
 		
-		logging.info("Database clean up performed. Repeat in '{[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
+		logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 	
 	def run(self):
 		while exitFlag == 0:
@@ -408,7 +408,7 @@ class commandControl():
 			command = newcommand
 		
 		if not len(command) > 1:
-			await self.__replySilence(message, "Please provide a reason to ban a user for {[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
+			await self.__replySilence(message, "Please provide a reason to ban a user for {0[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
 			return False
 		
 		command[0] = str(command[0])
@@ -680,7 +680,7 @@ def main(): # belongs to fosmbot's core
 	
 	if not "dbconnstr" in config:
 		logging.info("generating 'dbconnstr'...")
-		config["dbconnstr"] = "host={[DATABASE_HOST]} port={[DATABASE_PORT]} user={[DATABASE_USER]} password={[DATABASE_USER_PASSWD]} dbname={[DATABASE_DBNAME]}".format(config)
+		config["dbconnstr"] = "host={0[DATABASE_HOST]} port={0[DATABASE_PORT]} user={0[DATABASE_USER]} password={0[DATABASE_USER_PASSWD]} dbname={0[DATABASE_DBNAME]}".format(config)
 	else:
 		logging.info("using predefined 'dbconnstr' instead of generating one...")
 	
