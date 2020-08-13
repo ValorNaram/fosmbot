@@ -408,7 +408,7 @@ class commandControl():
 			command = newcommand
 		
 		if not len(command) > 1:
-			await self.__replySilence(message, "Please provide a reason to ban a user for {daystoban} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
+			await self.__replySilence(message, "Please provide a reason to ban a user for {[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
 			return False
 		
 		command[0] = str(command[0])
