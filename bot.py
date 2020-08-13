@@ -99,7 +99,7 @@ class commandControl():
 	def noncmd_createAnonymousRecord(self, userid):
 		tscreated = commander.createTimestamp()
 		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User", tscreated))
-		return out = {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User", "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
+		return {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User", "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
 	
 	def noncmd_getChatUsername(self, message):
 		username = ""
