@@ -74,7 +74,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 							if self.isExpired(output[user]["ts"]):
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
 		
-		logging.info("Database clean up performed. Repeat in '{}' hour(s)".format(int(config["DATABASE_CLEANUP_HOUR"])))
+		logging.info("Database clean up performed. Repeat in '{[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 	
 	def run(self):
 		while exitFlag == 0:
@@ -95,6 +95,12 @@ class commandControl():
 			return True
 		await self.__replySilence(message, "You don't have the necessary rights to touch the user!")
 		return False
+	
+	def noncmd_createAnonymousRecord(self, userid):
+		tscreated = commander.createTimestamp()
+		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User", tscreated))
+		return out = {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User", "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
+	
 	def noncmd_getChatUsername(self, message):
 		username = ""
 		if "username" in dir(message.chat) and message.chat.username is not None:
@@ -115,11 +121,11 @@ class commandControl():
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
 				try:
-					await app.send_message(int(group), "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+					await app.send_message(int(group), "[{0[displayname]}](tg://user?={0[id]}) **banned** user [{1|[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{}](tg://user?={}) **banned** user [{}](tg://user?id={}) from federation 'osmallgroups' for 365 days".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[displayname]}) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata))
 	
 	async def __performUnban(self, message, toban, issuer, targetuserdata):
 		for i in issuer:
@@ -133,11 +139,11 @@ class commandControl():
 				await app.unban_chat_member(int(group), toban)
 			except:
 				try:
-					await app.send_message(int(group), "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+					await app.send_message(int(group), "[{0[displayname]}](tg://user?={0[id]}) **unbanned** user [{1[displayname]}](tg://user?={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{}](tg://user?={}) **unbanned** user [{}](tg://user?id={}) from federation 'osmallgroups'.".format(issuer["displayname"], issuer["id"], targetuserdata["displayname"], toban))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?={0[id]}) **unbanned** user [{1[displayname]}](tg://user?={1[id]}) from federation 'osmallgroups'.".format(issuer, targetuserdata))
 	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
@@ -169,7 +175,7 @@ class commandControl():
 	async def __userisimmun(self, message, username, userid, targetuserdata):
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
-		await self.__replySilence(message, "The user [{}](tg://user?id={}) is immun against this!".format(targetuserdata["displayname"], userid))
+		await self.__replySilence(message, "The user [{0[displayname]}](tg://user?={0[id]}) is immun against this!".format(targetuserdata))
 	
 	def noncmd_getDisplayname(self, user): # belongs to fosmbot's core
 		displayname = []
@@ -196,8 +202,8 @@ class commandControl():
 		
 		for i in groups:
 			group = groups[i]
-			out.append("- {} (`{}`)".format("@" + str(group["username"]), str(i)))
-		out.append("\n**{} groups** participate in the federation".format(str(len(groups))))
+			out.append("- @{} (`{}`)".format(group["username"], i))
+		out.append("\n**{} groups** participate in the federation".format(len(groups)))
 		
 		await self.__reply(message, "\n".join(out))
 		
@@ -221,7 +227,7 @@ class commandControl():
 		dbhelper.sendToPostgres(config["removeuser"], (targetuserInQuestion_id,))
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
-		await self.__reply(message, "**Removed user** [{}](tg://user?id={}) from the known users list. A `/adduser` command does not exist but I will recreate the user for you if you forward a message from them to me!".format(targetuserdata["displayname"], targetuserInQuestion_id))
+		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?={0[id]}) from the known users list. A `/adduser` command does not exist but I will recreate the user for you if you forward a message from them to me!".format(targetuserdata))
 	
 	async def help(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
@@ -300,7 +306,7 @@ class commandControl():
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), int(targetuserInQuestion_id)))
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
-		await self.__reply(message, "Comment about [{}](tg://user?id={}) changed".format(targetuserdata["displayname"], str(targetuserInQuestion_id)))
+		await self.__reply(message, "Comment about [{0[displayname]}](tg://user?={0[id]}) changed".format(targetuserdata))
 	
 	async def testme(self, client, message, userlevel, userlevel_int, userdata):
 		await self.__replySilence(message, "Tested me!")
@@ -345,7 +351,7 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		for i in userdata:
 			userdata = userdata[i]
-		await self.__logGroup(message, "User [{}](tg://user?id={}) is now a `{}` one as requested by [{}](tg://user?id={}) with level `{}`".format(targetuserdata["displayname"], command[0], command[1], userdata["displayname"], message.from_user.id, userlevel))
+		await self.__logGroup(message, "User [{0[displayname]}](tg://user?={0[id]}) is now a `{}` one as requested by [{0[displayname]}](tg://user?={0[id]}) with level `{}`".format(targetuserdata["displayname"], command[1], userdata, userlevel))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if not message.chat.type == "private":
@@ -402,7 +408,7 @@ class commandControl():
 			command = newcommand
 		
 		if not len(command) > 1:
-			await self.__replySilence(message, "Please provide a reason to ban a user for {} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(str(config["daystoban"])))
+			await self.__replySilence(message, "Please provide a reason to ban a user for {daystoban} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
 			return False
 		
 		command[0] = str(command[0])
@@ -416,6 +422,9 @@ class commandControl():
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		toban = int(command[0])
 		del command[0]
+		
+		if len(targetuserdata) == 0:
+			targetuserdata = self.noncmd_createAnonymousRecord(toban)
 		
 		if not await self.__canTouchUser(message, toban, userlevel_int, targetuserdata):
 			return False
@@ -470,7 +479,7 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		for i in userdata:
 			userdata = userdata[i]
-		await self.__logGroup(message, "Ownership changed from [{}](tg://user?id={}) to [{}](tg://user?id={}). The new ownership will be ensured by a file on the server".format(userdata["displayname"], message.from_user.id, targetuserdata["displayname"], command[0]))
+		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?={0[id]}) to [{0[displayname]}](tg://user?={0[id]}). The new ownership will be ensured by a file on the server".format(userdata, targetuserdata))
 	
 	async def addgroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -510,7 +519,7 @@ class commandControl():
 		
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			output.append("- [{}](tg://user?id={}) (**level:** {}), @{} (`{}`)".format(user["displayname"], user["id"], user["level"], user["username"], user["id"]))
+			output.append("- [{0[displayname]}](tg://user?={0[id]}) (**level:** {0|[level]}), @{0|[username]} (`{0|[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
 		
@@ -526,7 +535,7 @@ class commandControl():
 			if user == None:
 				break
 			for userid in user:
-				output.append("- [{}](tg://user?id={}), @{} (`{}`)".format(user[userid]["displayname"], userid, user[userid]["username"], userid))
+				output.append("- [{0[displayname]}](tg://user?={0[id]}), @{0[username]} (`{0[id]}`)".format(user[userid]))
 		dbhelper.closeCursor(cursor)
 		
 		if len(output) > 0:
@@ -603,7 +612,7 @@ class commandControl():
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		
-		output = ["[{}](tg://user?id={}):".format(targetuserdata["displayname"], targetuserdata["id"])]
+		output = ["[{0[displayname]}](tg://user?={0[id]}):".format(targetuserdata)]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
 		for i in targetuserdata:
 			label = i
@@ -631,13 +640,13 @@ class commandControl():
 	
 	async def groupid(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if "chat" in dir(message) and message.chat is not None:
-			await self.__replySilence(message, "Chat id: `{}`".format(str(message.chat.id)))
+			await self.__replySilence(message, "Chat id: `{}`".format(message.chat.id))
 	
 	async def myid(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if not message.chat.type == "private":
 			return False
 		
-		await self.__replySilence(message, "Your id: `{}`".format(str(message.from_user.id)))
+		await self.__replySilence(message, "Your id: `{}`".format(message.from_user.id))
 	
 	async def groupauthorized(self, client, message, userlevel, userlevel_int, userdata):  # belongs to fosmbot's core
 		if message.chat.id in config["groupslist"]:
@@ -671,7 +680,7 @@ def main(): # belongs to fosmbot's core
 	
 	if not "dbconnstr" in config:
 		logging.info("generating 'dbconnstr'...")
-		config["dbconnstr"] = "host={} port={} user={} password={} dbname={}".format(config["DATABASE_HOST"], config["DATABASE_PORT"], config["DATABASE_USER"], config["DATABASE_USER_PASSWD"], config["DATABASE_DBNAME"])
+		config["dbconnstr"] = "host={DATABASE_HOST} port={DATABASE_PORT} user={DATABASE_USER} password={DATABASE_USER_PASSWD} dbname={DATABASE_DBNAME}".format(config)
 	else:
 		logging.info("using predefined 'dbconnstr' instead of generating one...")
 	
@@ -797,7 +806,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 			try:
 				await app.kick_chat_member(int(message.chat.id), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
-				await app.send_message(int(group), "User [{}](tg://user?id={}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user["displayname"], user["id"]))
+				await app.send_message(int(group), "User [{0[displayname]}](tg://user?={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
 		addToGroup(message, user)
 
