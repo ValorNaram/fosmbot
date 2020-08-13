@@ -680,7 +680,7 @@ def main(): # belongs to fosmbot's core
 	
 	if not "dbconnstr" in config:
 		logging.info("generating 'dbconnstr'...")
-		config["dbconnstr"] = "host={DATABASE_HOST} port={DATABASE_PORT} user={DATABASE_USER} password={DATABASE_USER_PASSWD} dbname={DATABASE_DBNAME}".format(config)
+		config["dbconnstr"] = "host={[DATABASE_HOST]} port={[DATABASE_PORT]} user={[DATABASE_USER]} password={[DATABASE_USER_PASSWD]} dbname={[DATABASE_DBNAME]}".format(config)
 	else:
 		logging.info("using predefined 'dbconnstr' instead of generating one...")
 	
