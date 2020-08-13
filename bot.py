@@ -121,7 +121,7 @@ class commandControl():
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
 				try:
-					await app.send_message(int(group), "[{0[displayname]}](tg://user?={0[id]}) **banned** user [{1|[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
+					await app.send_message(int(group), "[{0[displayname]}](tg://user?={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
 				except:	
 					pass
 		
@@ -519,7 +519,7 @@ class commandControl():
 		
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			output.append("- [{0[displayname]}](tg://user?={0[id]}) (**level:** {0|[level]}), @{0|[username]} (`{0|[id]}`)".format(user))
+			output.append("- [{0[displayname]}](tg://user?={0[id]}) (**level:** {0[level]}), @{0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
 		
