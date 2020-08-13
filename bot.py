@@ -351,7 +351,7 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		for i in userdata:
 			userdata = userdata[i]
-		await self.__logGroup(message, "User [{0[displayname]}](tg://user?={0[id]}) is now a `{}` one as requested by [{0[displayname]}](tg://user?={0[id]}) with level `{}`".format(targetuserdata["displayname"], command[1], userdata, userlevel))
+		await self.__logGroup(message, "User [{0[displayname]}](tg://user?={0[id]}) is now a `{}` one as requested by [{1[displayname]}](tg://user?={1[id]}) with level `{1[level]}`".format(targetuserdata, command[1], userdata))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if not message.chat.type == "private":
@@ -490,7 +490,7 @@ class commandControl():
 			username = self.noncmd_getChatUsername(message)
 			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id, username))
 			config["groupslist"][message.chat.id] = {"id": message.chat.id, "username": username}
-			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Added group [{title}](tg://group?id={id}). Now it belongs to the federation 'osmallgroups'".format(message.chat))
 	
 	async def removegroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -500,7 +500,7 @@ class commandControl():
 		if len(out) > 0:
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
 			del config["groupslist"][message.chat.id]
-			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Removed group [{title}](tg://group?id={id}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat))
 	
 	async def search(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
