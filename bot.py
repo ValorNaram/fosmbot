@@ -507,7 +507,7 @@ class commandControl():
 			username = self.noncmd_getChatUsername(message)
 			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id, username))
 			config["groupslist"][message.chat.id] = {"id": message.chat.id, "username": username}
-			await self.__logGroup(message, "Added group [{title}](tg://group?id={id}). Now it belongs to the federation 'osmallgroups'".format(message.chat))
+			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
 	
 	async def removegroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -517,7 +517,7 @@ class commandControl():
 		if len(out) > 0:
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
 			del config["groupslist"][message.chat.id]
-			await self.__logGroup(message, "Removed group [{title}](tg://group?id={id}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat))
+			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat.title, message.chat.id))
 	
 	async def search(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
