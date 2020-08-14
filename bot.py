@@ -89,6 +89,31 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	
 class commandControl():
 	async def __canTouchUser(self, message, userInQuestion, issuer_level, targetuserdata):
+		"""
+		Checks, if the user can touch the user in question
+		
+		Parameters:
+		  - `message` _object_: message object as returned by Pyrogram (https://docs.pyrogram.org/api/types/Message?highlight=message).
+		  - `userInQuestion` _string_: the telegram id of the user which the issuer wants to touch.
+		  - `issuer_level` _int_: the level of the user which executes this command (issuer).
+		  - `targetuserdata` _dict_: the record the bot has about the user which the issuer wants to touch.
+		Checks, if the user which executes the command ('issuer_level') has the right to touch the user (to change the record of them) (`userInQuestion`, `targetuserdata`)
+		
+		Returns:
+		  Boolean indicating if the issuer can touch the user in question or not
+		
+		Example:
+		You have the telegram id `5678` and level `1`
+		The user from which you want to change the record has the telegram id `1234` and the level `2`
+		    
+		    self.__canTouchUser(message, 1234, , {1234: {"id": 1234, "username": "foobar", "displayname": "Foo Bar", "level": "fedadmin", "comment": "", "issuedbyid": None, "groups": {}, "ts": "2020-12-01 00:00:00"}})
+		
+		Returns:
+		  True
+		
+		Answer:
+		  It returns `True` which means that the issuer can touch the user (`userInQuestion`, `targetuserdata`)
+		"""
 		userInQuestion_level, targetuserdata = dbhelper.getuserlevel(userInQuestion, targetuserdata)
 		userInQuestion_level = config["LEVELS"].index(userInQuestion_level)
 		if userInQuestion_level > issuer_level: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
@@ -97,14 +122,41 @@ class commandControl():
 		return False
 	
 	def noncmd_createAnonymousRecord(self, userid):
+		"""
+		Creates an anoymous record for `userid` _int_ (telegram id) in cases the issuer wants to perform an operation on an user the bot does not know.
+		
+		It returns `targetuserdata` _dict_:
+		
+		```python3
+		{"id": 1234, "username": "foobar", "displayname": "Foo Bar", "level": "fedadmin", "comment": "", "issuedbyid": None, "groups": {}, "ts": "2020-12-01 00:00:00"}}
+		```
+			
+		"""
 		tscreated = commander.createTimestamp()
-		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User" + str(userid), tscreated))
+		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User " + str(userid), tscreated))
 		return {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User" + str(userid), "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
 	
-	async def noncmd_userHasLocalChatPermission(self, message, user, permission):
-		if "chat" in dir(message) and "permissions" in dir(message.chat):
-			if permission in dir(message.chat.permissions):
-				return True
+	async def noncmd_userHasLocalChatPermission(self, message, user, permission, obeyChatPermission=True):
+		"""
+		Checks, if the issuer is an admin in a group which the specified right `permission` (see 'Parameters' at https://docs.pyrogram.org/api/types/ChatMember) applies to.
+		
+		Parameters:
+		  - `message` _object_: message object as returned by Pyrogram (https://docs.pyrogram.org/api/types/Message?highlight=message).
+		  - `user` _object_: a user object as returned by Pyrogram (https://docs.pyrogram.org/api/types/User#pyrogram.User)
+		  - `permission` _string_: permission to check, if the user has it. See also 'Parameters' at https://docs.pyrogram.org/api/types/ChatMember
+		  - `obeyChatPermission` __bool__: If true (default), then check the permissions of a group which are valid for all and do not require a higher user level. If False, then don't check that case.
+		
+		Example:
+		
+		
+		`self.noncmd_userHasLocalChatPermission(message, user, "can_change_info")`
+		`commander.noncmd_userHasLocalChatPermission(message, user, "can_change_info")`
+		
+		"""
+		if obeyChatPermission:
+			if "chat" in dir(message) and "permissions" in dir(message.chat):
+				if permission in dir(message.chat.permissions):
+					return True
 		
 		try:
 			member = await message.chat.get_member(user.id)
@@ -127,7 +179,7 @@ class commandControl():
 		
 		return username.lower()
 	
-	async def noncmd_performBan(self, message, toban, issuer, targetuserdata):
+	async def noncmd_performBan(self, message, toban, issuer, targetuserdata): # belongs to fosmbot's core
 		for i in issuer:
 			issuer = issuer[i]
 		for i in targetuserdata:
@@ -787,9 +839,16 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 			
 			if "groupspecified" in config:
 				if command[0] in config["groupspecified"]:
-					if not objid == 0 and str(objid) in config["groupspecified"][command[0]]:
+					if not objid == 0 and objid in config["groupspecified"][command[0]]:
 						await commander.execCommand(command, client, message, userlevel, rightlevel, user)
 						return True
+					elif command[0].startswith("can_"):
+							if await commander.noncmd_userHasLocalChatPermission(message, user, command[0]):
+								await commander.execCommand(command, client, message, userlevel, rightlevel, user)
+								return True
+							else:
+								await message.reply("Command not available to you. You need the '{}' for this group.", parse_mode="md")
+						return False
 					else:
 						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
 						return False
