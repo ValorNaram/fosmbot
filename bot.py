@@ -368,7 +368,7 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		for i in userdata:
 			userdata = userdata[i]
-		await self.__logGroup(message, "User [{0[displayname]}](tg://user?id={0[id]}) is now a `{}` one as requested by [{1[displayname]}](tg://user?id={1[id]}) with level `{1[level]}`".format(targetuserdata, command[1], userdata))
+		await self.__logGroup(message, "User [{0[displayname]}](tg://user?id={0[id]}) is now a `{1}` one as requested by [{2[displayname]}](tg://user?id={2[id]}) with level `{2[level]}`".format(targetuserdata, command[1], userdata))
 	
 	async def demoteme(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
 		if not message.chat.type == "private":
