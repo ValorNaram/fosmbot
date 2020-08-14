@@ -101,7 +101,7 @@ class commandControl():
 		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User" + str(userid), tscreated))
 		return {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User" + str(userid), "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
 	
-	def noncmd_userHasLocalChatPermission(self, message, user, permission):
+	async def noncmd_userHasLocalChatPermission(self, message, user, permission):
 		if "chat" in dir(message) and "permissions" in dir(message.chat):
 			if permission in dir(message.chat.permissions):
 				return True
