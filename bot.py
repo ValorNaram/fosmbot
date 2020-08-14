@@ -194,7 +194,7 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[displayname]}) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata))
 	
 	async def __performUnban(self, message, toban, issuer, targetuserdata):
 		for i in issuer:
