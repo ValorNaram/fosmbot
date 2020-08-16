@@ -59,6 +59,7 @@ LEVEL_BANNED:
   - privacypolicy
   - testme
   - groupauthorized
+  - userid
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');
 getuser: select * from users where id=%s;

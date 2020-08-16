@@ -262,6 +262,24 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
+	async def userid(self, client, message, userlevel, userlevel_int, userdata):
+		out = []
+		forwarded = False
+		message = message.reply_to_message
+		
+		if "forward_from" in dir(message) and message.forward_from is not None:
+			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.forward_from.from_user), message.forward_from.from_user.id, message.forward_from.from_user.id))
+			forwarded = True
+		
+		if forwarded:
+			out.append("and sent by")
+		else:
+			out.append("Message sent by")
+		
+		out.append("[{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.from_user), message.from_user.id, message.from_user.id))
+		
+		await self.__replySilence(message, " ".join(out))
+	
 	async def viewgroups(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
 			return False
