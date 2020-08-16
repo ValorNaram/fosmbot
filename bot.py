@@ -786,7 +786,14 @@ def main(): # belongs to fosmbot's core
 	commander = commandControl()
 	
 	logging.info("downloading list of groups...")
-	config["groupslist"] = dbhelper.sendToPostgres(config["getgroups"])
+	group = True
+	config["groupslist"] = {}
+	cur = dbhelper.getCursor(config["getgroups"])
+	while group is not None:
+		group = dbhelper.getOneRow(cur)
+		if group is not None:
+			for groupid in group:
+				config["groupslist"][groupid] = group[groupid]
 
 if __name__ == "__main__":
 	main()
