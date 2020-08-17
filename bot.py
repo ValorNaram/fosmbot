@@ -294,7 +294,7 @@ class commandControl():
 		
 		await self.__reply(message, "\n".join(out))
 		
-	async def removedata(self, client, message, userlevel, userlevel_int, userdata):
+	async def removerecord(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
 			return False
 		
@@ -315,6 +315,19 @@ class commandControl():
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list. A `/adduser` command does not exist but I will recreate the user for you if you forward a message from them to me!".format(targetuserdata))
+	
+	async def addrecord(self, client, message, userlevel, userlevel_int, userdata):
+		if not message.chat.type == "private":
+			return False
+		
+		command = message.command
+		
+		if len(command) == 2:
+			dbhelper.sendToPostgres(config["adduser"], (command[1], command[0], "Anonymous User {}".format(command[0]), self.createTimestamp()))
+			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
+		elif len(command) == 1:
+			dbhelper.sendToPostgres(config["adduser"], (command[0], str(command[0]), "Anonymous User {}".format(command[0]), self.createTimestamp()))
+			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
 	
 	async def help(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
@@ -815,6 +828,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 		dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
 	elif userexists:
 			dbhelper.sendToPostgres(config["updatedisplayname"], (displayname, user.id))
+			dbhelper.sendToPostgres(config["updateusername"], (user.username.lower(), user.id))
 			canReturn = True
 	
 	if not canReturn:

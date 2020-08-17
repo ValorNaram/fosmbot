@@ -73,11 +73,13 @@
   - Returns data about a known user (from all levels)
   - at least level __fedadmin__ required
   - all chats
-`/removeuser <username or id>`
-  - Removes the data of a particular user
+`/removerecord <username or id>`
+  - Removes the record of a particular user
   - level __owner__ required
   - **not possible:** to substitute `<username or id>`
   - private chat only
+`/addrecord <username or id> <user id>`
+  - Same as `/removerecord` but let's the owner create a user record by hand
 `/userid`
   - Prints the id from the original sender of a message (forwarded messages only) and or the id of the actual sender
   - reply to the message you want the (original) sender's id for
