@@ -928,7 +928,7 @@ async def userleave(client, message):
 	if len(groups) == 0 or not message.chat.id in user["groups"]:
 		return False
 	
-	dbhelper.sendToPostgres(config["removegroupfromuser"], (str(message.chat.id), user["id"]))
+	dbhelper.sendToPostgres(config["removegroupfromuser"], (message.chat.id, user["id"]))
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
