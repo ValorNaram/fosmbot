@@ -946,6 +946,9 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 		if not "pseudoProfile" in user:
 			message.chat.type = "group"
 		addUserToDatabase(message.chat.type, message.forward_from)
+		
+	if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+		addUserToDatabase(message.chat.type, message.reply_to_message.from_user)
 	
 	if message.chat.type == "channel" or message.chat.type == "private" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
 		return False
