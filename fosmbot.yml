@@ -80,6 +80,7 @@ updatecomment: update users set comment=%s where id=%s;
 updatedisplayname: update users set displayname=%s where id=%s;
 updateissuedbyid: update users set issuedbyid=%s where id=%s;
 updatetimestamp: update users set timestamp=%s where id=%s;
+updateusername: update users set username=%s where id=%s;
 dbcleanupbyts: select id, ts from users where level=%s;
 
 table_users:
