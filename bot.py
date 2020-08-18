@@ -89,7 +89,8 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	
 class commandControl():
 	def noncmd_createuserrecord(self, userid, username, displayname):
-		return {user.id: {"id": userid, "username": str(username.lower().replace("@", "")), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": self.createTimestamp()}}
+		userid = str(userid)
+		return {userid: {"id": userid, "username": str(username.lower().replace("@", "")), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": self.createTimestamp()}}
 	async def __canTouchUser(self, message, userInQuestion, issuer_level, targetuserdata):
 		"""
 		Checks, if the user can touch the user in question
@@ -357,8 +358,8 @@ class commandControl():
 			await self.__replySilence("Please request access to insights of the data we have about you by issueing that command in private chat with me.")
 			return False
 		
-		if dbhelper.userExists(message.from_user.id, userdata):
-			message.command = [message.from_user.id]
+		if dbhelper.userExists(str(message.from_user.id), userdata):
+			message.command = [str(message.from_user.id)]
 			await self.__reply(message, "The data we have about you (nothing critical):")
 			await self.userstat(client, message, userlevel, userlevel_int, userdata, ["issuedbyid"])
 			await self.__reply(message, "One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet. In this case the 'comment' field does not contain anything.")
@@ -384,7 +385,7 @@ class commandControl():
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [message.reply_to_message.from_user.id]
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -422,7 +423,7 @@ class commandControl():
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [message.reply_to_message.from_user.id]
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -466,7 +467,7 @@ class commandControl():
 		if userlevel_int == 0:
 			await self.__ownerCannotDo(message)
 		else:
-			dbhelper.sendToPostgres(config["changelevel"], ("user", message.from_user.id))
+			dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
 			await self.__reply(message, "You are now powerless! Thank You for your effort to cut down spammers!")
 	
 	async def funban(self, client, message, userlevel, userlevel_int, userdata):
@@ -474,7 +475,7 @@ class commandControl():
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [message.reply_to_message.from_user.id]
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -498,7 +499,7 @@ class commandControl():
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", command[0]))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, command[0]))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), command[0]))
 		dbhelper.sendToPostgres(config["changelevel"], ("user", command[0]))
 		
 		await self.__performUnban(message, command[0], userdata, targetuserdata)
@@ -508,7 +509,7 @@ class commandControl():
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [message.reply_to_message.from_user.id]
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -552,7 +553,7 @@ class commandControl():
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, toban))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), toban))
 		dbhelper.sendToPostgres(config["changelevel"], ("banned", toban))
 		
 		await self.noncmd_performBan(message, toban, userdata, targetuserdata)
@@ -588,7 +589,7 @@ class commandControl():
 			await self.__userNotFound(message, userinput)
 			return False
 		
-		dbhelper.sendToPostgres(config["changelevel"], ("user", message.from_user.id))
+		dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
 		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], command[0]))
 		
 		changeOwnerInFile(command[0])
@@ -675,7 +676,7 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		if dbhelper.userHasLevel(message.from_user.id, "banned", userdata):
+		if dbhelper.userHasLevel(str(message.from_user.id), "banned", userdata):
 			await self.mystat(client, message, userlevel, userlevel_int, userdata)
 		else:
 			await self.__reply(message, "You are not a banned one!")
@@ -715,7 +716,7 @@ class commandControl():
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [message.reply_to_message.from_user.id]
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -755,7 +756,7 @@ class commandControl():
 		await self.__reply(message, "\n".join(output))
 	
 	async def mystat(self, client, message, userlevel, userlevel_int, userdata):
-		message.command = [message.from_user.id]
+		message.command = [str(message.from_user.id)]
 		await self.userstat(client, message, userlevel, userlevel_int, userdata, ["issuedbyid"])
 	
 	async def mylevel(self, client, message, userlevel, userlevel_int, userdata):
@@ -843,7 +844,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	displayname = commander.noncmd_getDisplayname(user)
 	canReturn = False
 	out = {}
-	userexists, out = dbhelper.userExists(user.id)
+	userexists, out = dbhelper.userExists(str(user.id))
 	if user.username is None:
 		user.username = str(user.id)
 	
@@ -855,25 +856,25 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 		if len(output) > 0:
 			out = output
 			userexists = True
-			dbhelper.sendToPostgres(config["updateuserid"], (user.id, user.username.lower()))
+			dbhelper.sendToPostgres(config["updateuserid"], (str(user.id), user.username.lower()))
 	
 	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
-		dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
+		dbhelper.sendToPostgres(config["adduser"], (str(user.id), user.username.lower(), displayname, commander.createTimestamp()))
 	elif userexists:
-			dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, user.id))
+			dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
 			canReturn = True
 	
 	if not canReturn:
-		out = commander.noncmd_createuserrecord(user.id, user.username, displayname)
+		out = commander.noncmd_createuserrecord(str(user.id), user.username, displayname)
 	if chat == "private" and not userexists or chat == "channel" and not userexists:
-		out[user.id]["pseudoProfile"] = True
+		out[str(user.id)]["pseudoProfile"] = True
 	
 	if user.id == config["botowner"]:
 		config["botownerrecord"] = out
 		if not dbhelper.userHasLevel(config["botowner"], config["LEVELS"][0], out):
 			dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(config["botowner"])))
 			if len(out) > 1:
-				out[user.id]["level"] = config["LEVELS"][0]
+				out[str(user.id)]["level"] = config["LEVELS"][0]
 			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
 	
 	return out
@@ -894,7 +895,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 		command = [command]
 		message.command = [message.command]
 	
-	userlevel, user = dbhelper.getuserlevel(message.from_user.id, user)
+	userlevel, user = dbhelper.getuserlevel(str(message.from_user.id), user)
 	if userlevel.startswith("error"):
 		userlevel = config["LEVELS"][len(config["LEVELS"])-1]
 	
@@ -904,9 +905,9 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 		if command[0] in config["LEVEL_" + config["LEVELS"][i].upper()]:
 			objid = 0
 			if "chat" in dir(message) and message.chat is not None:
-				objid = message.chat.id
+				objid = str(message.chat.id)
 			else:
-				objid = message.from_user.id
+				objid = str(message.from_user.id)
 			
 			if "groupspecified" in config:
 				if command[0] in config["groupspecified"]:
@@ -959,7 +960,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
-	user = dbhelper.sendToPostgres(config["getuser"], (message.left_chat_member.id,))
+	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
 	if len(user) == 0:
 		return False
 	for i in user:
