@@ -199,7 +199,7 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{} ) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata, toban))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} ) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata, toban))
 	
 	async def __performUnban(self, message, toban, issuer, targetuserdata):
 		for i in issuer:
@@ -219,7 +219,7 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{} )from federation 'osmallgroups'.".format(issuer, targetuserdata, toban))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} )from federation 'osmallgroups'.".format(issuer, targetuserdata, toban))
 	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
@@ -961,6 +961,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
 	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
+	logging.info(user)
 	if len(user) == 0:
 		return False
 	for i in user:
