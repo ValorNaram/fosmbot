@@ -861,8 +861,8 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
 		dbhelper.sendToPostgres(config["adduser"], (str(user.id), user.username.lower(), displayname, commander.createTimestamp()))
 	elif userexists:
-			dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
-			canReturn = True
+		dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
+		canReturn = True
 	
 	if not canReturn:
 		out = commander.noncmd_createuserrecord(str(user.id), user.username, displayname)
