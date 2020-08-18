@@ -508,8 +508,9 @@ class commandControl():
 			command = newcommand
 		
 		if not len(command) > 1:
-			await self.__replySilence(message, "Please provide a reason to ban a user for {0[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
-			return False
+			#await self.__replySilence(message, "Please provide a reason to ban a user for {0[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
+			#return False
+			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
 		
 		command[0] = str(command[0])
 		userinput = command[0]
@@ -530,7 +531,10 @@ class commandControl():
 			return False
 		
 		if dbhelper.userHasLevel(toban, "banned", targetuserdata):
-			await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
+			#await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
+			message.command = [toban, " ".join(command)]
+			
+			await self.changecomment(client, message, userlevel, userlevel_int, userdata)
 			return False
 		
 		toban_level, targetuserdata = dbhelper.getuserlevel(toban, targetuserdata)
