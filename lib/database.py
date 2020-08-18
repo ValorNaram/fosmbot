@@ -36,7 +36,7 @@ class helper(): # thread safe
 		result = False
 		cur = self.conn.cursor()
 		
-		cur.execute(self.conf["getuser"], (userid,))
+		cur.execute(self.conf["getuser"], (str(userid),))
 		if cur.rowcount == 1:
 			result = True
 		else:
@@ -65,6 +65,7 @@ class helper(): # thread safe
 			return False
 	
 	def userHasLevel(self, userid, level, data={}):
+		userid = str(userid)
 		if self.userExists(userid, data):
 			result, data = self.getuserlevel(userid, data)
 			
@@ -94,7 +95,7 @@ class helper(): # thread safe
 	
 	def getuserlevel(self, userid, output={}):
 		if len(output) == 0:
-			output = self.sendToPostgres(self.conf["getuser"], (userid,))
+			output = self.sendToPostgres(self.conf["getuser"], (str(userid),))
 		
 		if len(output) == 0:
 			return "error - user not existing", {}

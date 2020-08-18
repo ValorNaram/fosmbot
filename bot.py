@@ -88,6 +88,8 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 		logging.info("Database cleanup stopped!")
 	
 class commandControl():
+	def noncmd_createuserrecord(self, userid, username, displayname):
+		return {user.id: {"id": userid, "username": str(username.lower().replace("@", "")), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": self.createTimestamp()}}
 	async def __canTouchUser(self, message, userInQuestion, issuer_level, targetuserdata):
 		"""
 		Checks, if the user can touch the user in question
@@ -196,7 +198,7 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{} ) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata, toban))
 	
 	async def __performUnban(self, message, toban, issuer, targetuserdata):
 		for i in issuer:
@@ -216,7 +218,7 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'.".format(issuer, targetuserdata))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{} )from federation 'osmallgroups'.".format(issuer, targetuserdata, toban))
 	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
@@ -307,7 +309,7 @@ class commandControl():
 		
 		command[0] = str(command[0])
 		targetuserInQuestion = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, targetuserInQuestion)
@@ -393,7 +395,7 @@ class commandControl():
 		
 		command[0] = str(command[0])
 		targetuserInQuestion = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, targetuserInQuestion)
@@ -407,7 +409,7 @@ class commandControl():
 		if not await self.__canTouchUser(message, targetuserInQuestion_id, userlevel_int, targetuserdata):# or targetuserInQuestion_id in config["botownerrecord"]:
 			return False
 		
-		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), int(targetuserInQuestion_id)))
+		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), targetuserInQuestion_id))
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		await self.__reply(message, "Comment about [{0[displayname]}](tg://user?id={0[id]}) changed".format(targetuserdata))
@@ -439,7 +441,7 @@ class commandControl():
 		
 		command[0] = str(command[0])
 		userToPromote = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, userToPromote)
@@ -483,7 +485,7 @@ class commandControl():
 		
 		command[0] = str(command[0])
 		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, userinput)
@@ -495,9 +497,9 @@ class commandControl():
 			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, str(command[0])))
 			return False
 		
-		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", int(command[0])))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, int(command[0])))
-		dbhelper.sendToPostgres(config["changelevel"], ("user", int(command[0])))
+		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", command[0]))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (message.from_user.id, command[0]))
+		dbhelper.sendToPostgres(config["changelevel"], ("user", command[0]))
 		
 		await self.__performUnban(message, command[0], userdata, targetuserdata)
 	
@@ -516,18 +518,19 @@ class commandControl():
 			#return False
 			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
 		
-		command[0] = str(command[0])
 		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
-				await self.__userNotFound(message, userinput)
-				return False
-				#dbhelper.sendToPostgres(config["adduserbyusername"], (userinput.lower(), "@{}".format(userinput.lower()), commander.createTimestamp()))
-				#await self.__replySilence(message, "I added user @{} by username however only the ban operation works with usernames. Execution of all other commands against this user is not possible. Not even __funban__. Will perform ban shortly!")
+				#await self.__userNotFound(message, userinput)
+				#return False
+				userinput = userinput.lower().replace("@", "")
+				dbhelper.sendToPostgres(config["adduser"], (userinput, userinput, "Anonymous User {}".format(userinput), self.createTimestamp()))
+				targetuserdata = self.noncmd_createuserrecord(userinput, userinput, "Anonymous User {}".format(userinput))
+		
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
-		toban = int(command[0])
+		toban = command[0]
 		del command[0]
 		
 		if len(targetuserdata) == 0:
@@ -564,26 +567,32 @@ class commandControl():
 		if not userlevel_int == 0:
 			return False
 		
-		command[0] = str(command[0])
 		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
 				await self.__userNotFound(message, userinput)
 				return False
+			try:
+				int(command[0])
+			except:
+				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it: Couldn't convert username to telegram id")
+				return False
+		command[0] = int(command[0])
+		
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		
-		if not dbhelper.userExists(int(command[0]), targetuserdata):
+		if not dbhelper.userExists(command[0], targetuserdata):
 			await self.__userNotFound(message, userinput)
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], ("user", message.from_user.id))
-		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], int(command[0])))
+		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], command[0]))
 		
 		changeOwnerInFile(command[0])
-		config["botowner"] = int(command[0])
+		config["botowner"] = command[0]
 		config["botownerrecord"] = targetuserdata
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
@@ -717,12 +726,12 @@ class commandControl():
 		
 		command[0] = str(command[0])
 		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id
+		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, userinput)
 				return False
-		if int(command[0]) in userdata:
+		if command[0] in userdata:
 			targetuserdata = userdata
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
@@ -855,7 +864,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			canReturn = True
 	
 	if not canReturn:
-		out = {user.id: {"id": user.id, "username": str(user.username), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": commander.createTimestamp()}}
+		out = commander.noncmd_createuserrecord(user.id, user.username, displayname)
 	if chat == "private" and not userexists or chat == "channel" and not userexists:
 		out[user.id]["pseudoProfile"] = True
 	
@@ -942,9 +951,9 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		
 		if user["level"] == "banned" and not message.chat.type == "channel":
 			try:
-				await app.kick_chat_member(int(message.chat.id), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+				await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
-				await app.send_message(int(group), "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
+				await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
 		addToGroup(message, user)
 

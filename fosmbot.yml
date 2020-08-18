@@ -63,7 +63,6 @@ LEVEL_BANNED:
   - userid
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');
-adduserbyusername: insert into users values (NULL,%s,'Anonymous User %s','user','',NULL,%s,'{}')
 getuser: select * from users where id=%s;
 getuserbyusername: select * from users where username=%s LIMIT 1;
 getusersbylevel: select * from users where level=%s;
