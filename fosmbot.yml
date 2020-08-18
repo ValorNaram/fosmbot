@@ -63,12 +63,13 @@ LEVEL_BANNED:
   - userid
 
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');
+adduserbyusername: insert into users values (NULL,%s,'Anonymous User %s','user','',NULL,%s,'{}')
 getuser: select * from users where id=%s;
 getuserbyusername: select * from users where username=%s LIMIT 1;
 getusersbylevel: select * from users where level=%s;
 getusersbydisplayname: select * from users where displayname like %s;
 removeuser: delete from users where id=%s;
-removegroupfromuser: update users set groups=groups - %s where id=%s;
+removegroupfromuser: update users set groups=groups - '{}' where id={}; # necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
 addgrouptouser: update users set groups=groups || %s where id=%s;
 changelevel: update users set level=%s where id=%s;
 authorizegroup: insert into groups values (%s, %s);
@@ -78,7 +79,8 @@ getgroup: select * from groups where id=%s;
 banuser: update users set level='banned' where id=%s;
 unbanuser: update users set level='user' where id=%s;
 updatecomment: update users set comment=%s where id=%s;
-updatedisplayname: update users set displayname=%s where id=%s;
+updateuserinfo: update user set username=%s, displayname=%s where id=%s;
+updateuserid: update user set id=%s where username=%s;
 updateissuedbyid: update users set issuedbyid=%s where id=%s;
 updatetimestamp: update users set timestamp=%s where id=%s;
 updateusername: update users set username=%s where id=%s;

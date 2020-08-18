@@ -186,6 +186,8 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		
 		for group in targetuserdata["groups"]:
+			if not group in config["groupslist"]:
+				continue
 			try:
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except:
@@ -204,6 +206,8 @@ class commandControl():
 		
 		groups = targetuserdata["groups"]
 		for group in targetuserdata["groups"]:
+			if not group in config["groupslist"]:
+				continue
 			try:
 				await app.unban_chat_member(int(group), toban)
 			except:
@@ -519,6 +523,8 @@ class commandControl():
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, userinput)
 				return False
+				#dbhelper.sendToPostgres(config["adduserbyusername"], (userinput.lower(), "@{}".format(userinput.lower()), commander.createTimestamp()))
+				#await self.__replySilence(message, "I added user @{} by username however only the ban operation works with usernames. Execution of all other commands against this user is not possible. Not even __funban__. Will perform ban shortly!")
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		toban = int(command[0])
@@ -835,11 +841,17 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if user.is_self or user.is_deleted or user.is_bot or user.is_support:
 		return out
 	
+	if not userexists:
+		output = dbhelper.sendToPostgres(config["getuserbyusername"], (user.username.lower(),))
+		if len(output) > 0:
+			out = output
+			userexists = True
+			dbhelper.sendToPostgres(config["updateuserid"], (user.id, user.username.lower()))
+	
 	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
 		dbhelper.sendToPostgres(config["adduser"], (user.id, user.username.lower(), displayname, commander.createTimestamp()))
 	elif userexists:
-			dbhelper.sendToPostgres(config["updatedisplayname"], (displayname, user.id))
-			dbhelper.sendToPostgres(config["updateusername"], (user.username.lower(), user.id))
+			dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, user.id))
 			canReturn = True
 	
 	if not canReturn:
@@ -937,7 +949,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		addToGroup(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
-async def userleave(client, message):
+async def userleaves(client, message):
 	user = dbhelper.sendToPostgres(config["getuser"], (message.left_chat_member.id,))
 	if len(user) == 0:
 		return False
@@ -953,7 +965,7 @@ async def userleave(client, message):
 	if len(groups) == 0 or not message.chat.id in user["groups"]:
 		return False
 	
-	dbhelper.sendToPostgres(config["removegroupfromuser"], (message.chat.id, user["id"]))
+	dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
