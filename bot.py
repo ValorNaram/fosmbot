@@ -400,7 +400,7 @@ class commandControl():
 		
 		del command[0]
 		
-		if not await self.__canTouchUser(message, targetuserInQuestion_id, userlevel_int, targetuserdata) or targetuserInQuestion_id in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, targetuserInQuestion_id, userlevel_int, targetuserdata):# or targetuserInQuestion_id in config["botownerrecord"]:
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), int(targetuserInQuestion_id)))
@@ -443,7 +443,7 @@ class commandControl():
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		
-		if not await self.__canTouchUser(message, command[0], userlevel_int, targetuserdata) or command[0] in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, command[0], userlevel_int, targetuserdata):# or command[0] in config["botownerrecord"]:
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], (command[1], command[0]))
@@ -538,7 +538,7 @@ class commandControl():
 			return False
 		
 		toban_level, targetuserdata = dbhelper.getuserlevel(toban, targetuserdata)
-		if "immunity" in config and toban_level in config["immunity"] or toban in config["botownerrecord"]:
+		if "immunity" in config and toban_level in config["immunity"]:# or toban in config["botownerrecord"]: # bug here but another security system prevents from unattended owner overwrite so it is not dramatic to deactivate this here
 			await self.__userisimmun(message, userinput, toban, targetuserdata);
 			return False
 		
