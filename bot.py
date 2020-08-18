@@ -666,7 +666,8 @@ class commandControl():
 			await self.__reply(message, "You are not a banned one!")
 	
 	async def fbanlist(self, client, message, userlevel, userlevel_int, userdata):
-		output = ["id,username,displayname,reason,issued"]
+		output = ["id,username,displayname,reason,issued by,kicked from groups"]
+		fields = ["id", "username", "displayname", "comment", "issuedbyid", "groups"]
 		
 		banned = True
 		cursor = dbhelper.getCursor(config["getusersbylevel"], ("banned",))
@@ -677,8 +678,14 @@ class commandControl():
 			for userid in banned:
 				line = []
 				row = banned[userid]
-				for field in row:
-					line.append("\"" + field + "\"")
+				for field in fields:
+					if field == "groups":
+						dic = []
+						for g in row[field]:
+							dic.append("@" + row[field][g])
+						line.append("\"{}\"".format(" ".join(dic)))
+					else:
+						line.append("\"{}\"".format(row[field]))
 				output.append(",".join(line))
 		dbhelper.closeCursor(cursor)
 		
