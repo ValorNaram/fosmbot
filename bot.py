@@ -1007,6 +1007,7 @@ async def userleaves(client, message):
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
 	user = addUserToDatabase(message.chat.type, message.from_user)
+	logging.info(user)
 	if len(user) == 0:
 		return False
 	
