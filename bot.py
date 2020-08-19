@@ -903,7 +903,7 @@ def addToGroup(message, user):
 	dbhelper.sendToPostgres(config["addgrouptouser"], ("{\"" + str(message.chat.id) + "\": \"" + username + "\"}", user["id"]))
 	user["groups"][message.chat.id] = username
 
-def banUserIfnecessary(message, user):
+async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
 		try:
 			await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
@@ -979,7 +979,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		for i in user:
 			user = user[i]
 		
-		banUserIfnecessary(message, user)
+		await banUserIfnecessary(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
@@ -1024,7 +1024,7 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	if message.chat.type == "channel" or message.chat.type == "private" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
 		return False
 	
-	banUserIfnecessary(message, user)
+	await banUserIfnecessary(message, user)
 
 if __name__ == "__main__":
 	logging.info("Scheduling database cleanup...")
