@@ -196,6 +196,9 @@ class commandControl():
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		
+		targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
+		targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
+		
 		for group in targetuserdata["groups"]:
 			if not int(group) in config["groupslist"]:
 				continue
@@ -214,6 +217,9 @@ class commandControl():
 			issuer = issuer[i]
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
+		
+		targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
+		targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
 		
 		for group in targetuserdata["groups"]:
 			if not int(group) in config["groupslist"]:
@@ -519,7 +525,7 @@ class commandControl():
 			command = newcommand
 		
 		if len(command) == 0:
-			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
+			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		if not len(command) > 1:
 			#await self.__replySilence(message, "Please provide a reason to ban a user for {0[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
