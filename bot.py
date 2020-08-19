@@ -741,10 +741,12 @@ class commandControl():
 			targetuserdata = userdata
 		if len(targetuserdata) == 0:
 			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
+			if len(targetuserdata) == 0:
+				await self.__userNotFound(message, userinput)
+				return False
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		
-		logging.info(targetuserdata)
 		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuserdata)]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
 		for i in targetuserdata:
