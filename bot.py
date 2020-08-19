@@ -653,7 +653,8 @@ class commandControl():
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
 			user["id"] = self.telegramidorusername(user["id"])
-			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), @{0[username]} (`{0[id]}`)".format(user))
+			user["username"] = self.telegramidorusername(user["username"])
+			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), {0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
 		
@@ -669,8 +670,9 @@ class commandControl():
 			if user == None:
 				break
 			for userid in user:
-				user["id"] = self.telegramidorusername(user["id"])
-				output.append("- [{0[displayname]}](tg://user?id={0[id]}), @{0[username]} (`{0[id]}`)".format(user[userid]))
+				user[userid]["id"] = self.telegramidorusername(user[userid]["id"])
+				user[userid]["username"] = self.telegramidorusername(user[userid]["username"])
+				output.append("- [{0[displayname]}](tg://user?id={0[id]}), {0[username]} (`{0[id]}`)".format(user[userid]))
 		dbhelper.closeCursor(cursor)
 		
 		if len(output) > 0:
@@ -761,6 +763,7 @@ class commandControl():
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
 		for i in targetuserdata:
 			targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
+			targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
 			label = i
 			if i == "groups":
 				groupslist = []
