@@ -215,12 +215,9 @@ class commandControl():
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		
-		logging.info("performing unban...")
 		for group in targetuserdata["groups"]:
-			logging.info(str(group) + " " + str(config["groupslist"]))
-			if not group in config["groupslist"]:
+			if not int(group) in config["groupslist"]:
 				continue
-			logging.info("Unban operation in '{}'".format(group))
 			if not await app.unban_chat_member(int(group), toban):
 				try:
 					await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
