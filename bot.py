@@ -197,7 +197,7 @@ class commandControl():
 			targetuserdata = targetuserdata[i]
 		
 		for group in targetuserdata["groups"]:
-			if not group in config["groupslist"]:
+			if not int(group) in config["groupslist"]:
 				continue
 			try:
 				await app.kick_chat_member(int(group), toban, int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
