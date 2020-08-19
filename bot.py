@@ -88,6 +88,14 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 		logging.info("Database cleanup stopped!")
 	
 class commandControl():
+	def telegramidorusername(self, userid):
+		userid = str(userid).replace("@", "")
+		try:
+			userid = str(int(userid))
+			return userid # is telegram id
+		except:
+			return "@" + userid # is telegram username
+	
 	def noncmd_createuserrecord(self, userid, username, displayname):
 		userid = str(userid)
 		return {userid: {"id": userid, "username": str(username.lower().replace("@", "")), "displayname": displayname, "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": self.createTimestamp()}}
@@ -644,6 +652,7 @@ class commandControl():
 		
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
+			user["id"] = self.telegramidorusername(user["id"])
 			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), @{0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
@@ -660,6 +669,7 @@ class commandControl():
 			if user == None:
 				break
 			for userid in user:
+				user["id"] = self.telegramidorusername(user["id"])
 				output.append("- [{0[displayname]}](tg://user?id={0[id]}), @{0[username]} (`{0[id]}`)".format(user[userid]))
 		dbhelper.closeCursor(cursor)
 		
@@ -750,6 +760,7 @@ class commandControl():
 		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuserdata)]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
 		for i in targetuserdata:
+			targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
 			label = i
 			if i == "groups":
 				groupslist = []
@@ -892,6 +903,16 @@ def addToGroup(message, user):
 	dbhelper.sendToPostgres(config["addgrouptouser"], ("{\"" + str(message.chat.id) + "\": \"" + username + "\"}", user["id"]))
 	user["groups"][message.chat.id] = username
 
+def banUserIfnecessary(message, user):
+	if user["level"] == "banned" and not message.chat.type == "channel":
+		try:
+			await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+		except:
+			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
+			return False
+	
+	addToGroup(message, user)
+
 @app.on_message(pyrogram.Filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
 	user = addUserToDatabase(message.chat.type, message.from_user)
@@ -958,13 +979,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		for i in user:
 			user = user[i]
 		
-		if user["level"] == "banned" and not message.chat.type == "channel":
-			try:
-				await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-			except:
-				await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
-			return False
-		addToGroup(message, user)
+		banUserIfnecessary(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
@@ -1008,6 +1023,8 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	
 	if message.chat.type == "channel" or message.chat.type == "private" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
 		return False
+	
+	banUserIfnecessary(message, user)
 
 if __name__ == "__main__":
 	logging.info("Scheduling database cleanup...")
