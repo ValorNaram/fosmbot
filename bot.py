@@ -217,7 +217,7 @@ class commandControl():
 		
 		logging.info("performing unban...")
 		for group in targetuserdata["groups"]:
-			logging.info(group)
+			logging.info(str(group) + " " + str(config["groupslist"]))
 			if not group in config["groupslist"]:
 				continue
 			logging.info("Unban operation in '{}'".format(group))
