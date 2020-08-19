@@ -215,16 +215,15 @@ class commandControl():
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
 		
-		groups = targetuserdata["groups"]
+		logging.info("performing unban...")
 		for group in targetuserdata["groups"]:
 			if not group in config["groupslist"]:
 				continue
-			try:
-				await app.unban_chat_member(int(group), toban)
-			except:
+			logging.info("Unban operation in '{}'".format(group))
+			if not await app.unban_chat_member(int(group), toban):
 				try:
 					await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
-				except:	
+				except:
 					pass
 		
 		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} )from federation 'osmallgroups'.".format(issuer, targetuserdata, toban))
@@ -492,7 +491,6 @@ class commandControl():
 			await self.__reply(message, "Syntax: `/funban <username or id>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
-		command[0] = str(command[0])
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
@@ -987,7 +985,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
 	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
-	logging.info(user)
+	logging.info("User '{}'".format(user))
 	if len(user) == 0:
 		return False
 	for i in user:
