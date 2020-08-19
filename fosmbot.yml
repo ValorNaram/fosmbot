@@ -86,7 +86,7 @@ updateusername: update users set username=%s where id=%s;
 dbcleanupbyts: select id, ts from users where level=%s;
 
 table_users:
-  - id int
+  - id text
   - username text
   - displayname text
   - level text
