@@ -869,6 +869,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	canReturn = False
 	userexists = False
 	out = dbhelper.getResult(config["getuser"], (str(user.id),), limit=1).get()
+	out["level_int"] = config["LEVELS"].index(out["level"])
 	if len(out) > 0:
 		userexists = True
 		
