@@ -145,7 +145,7 @@ class commandControl():
 		"""
 		tscreated = commander.createTimestamp()
 		dbhelper.sendToPostgres(config["adduser"], (userid, str(userid), "Anonymous User " + str(userid), tscreated))
-		return {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User" + str(userid), "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
+		return {userid: {"id": userid, "username": str(userid), "displayname": "Anonymous User " + str(userid), "level": "user", "comment": "", "issuedbyid": None, "groups": {}, "ts": tscreated}}
 	
 	async def noncmd_userHasLocalChatPermission(self, message, user, permission, obeyChatPermission=True):
 		"""
@@ -210,7 +210,8 @@ class commandControl():
 				except:	
 					pass
 		
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} ) from federation 'osmallgroups' for 365 days".format(issuer, targetuserdata, toban))
+		toban = self.telegramidorusername(toban)
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuserdata, toban))
 	
 	async def __performUnban(self, message, toban, issuer, targetuserdata):
 		for i in issuer:
@@ -230,6 +231,7 @@ class commandControl():
 				except:
 					pass
 		
+		toban = self.telegramidorusername(toban)
 		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( @{2} )from federation 'osmallgroups'.".format(issuer, targetuserdata, toban))
 	
 	async def __ownerCannotDo(self, message):
@@ -319,20 +321,22 @@ class commandControl():
 		targetuserdata = {}
 		command = message.command
 		
-		command[0] = str(command[0])
 		targetuserInQuestion = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			command[0], targetuserdata = dbhelper.resolveUsername(command[0])
 			if command[0].startswith("error"):
 				await self.__userNotFound(message, targetuserInQuestion)
 				return False
+		if len(targetuserdata) == 0:
+			targetuserdata = dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		
 		targetuserInQuestion_id = command[0]
 		del command[0]
 		
 		dbhelper.sendToPostgres(config["removeuser"], (targetuserInQuestion_id,))
 		for i in targetuserdata:
 			targetuserdata = targetuserdata[i]
-		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list. A `/adduser` command does not exist but I will recreate the user for you if you forward a message from them to me!".format(targetuserdata))
+		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list.".format(targetuserdata))
 	
 	async def addrecord(self, client, message, userlevel, userlevel_int, userdata):
 		if not message.chat.type == "private":
@@ -570,6 +574,8 @@ class commandControl():
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), toban))
 		dbhelper.sendToPostgres(config["changelevel"], ("banned", toban))
+		targetuserdata["comment"] = " ".join(command)
+		targetuserdata["issuedbyid"] = str(message.from_user.id)
 		
 		await self.noncmd_performBan(message, toban, userdata, targetuserdata)
 		
