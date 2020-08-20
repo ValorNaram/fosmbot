@@ -4,6 +4,64 @@ from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
 from psycopg2 import sql
 import psycopg2
 
+class Record():
+	def __toDict(self, table):
+		data = {}
+		index = 0
+		if self.cur.rowcount == 0:
+			return data
+		
+		for row in table:
+			col = {}
+			for i in range(0, len(self.columns)):
+				col[self.columns[i]] = row[i]
+			data[index] = col
+			index += 1
+		return data
+	
+	def __init__(self, conn, query, params=(), limit=1):
+		self.conn = conn
+		self.cur = self.conn.cursor()
+		self.limit = limit
+		
+		if params == ():
+			self.cur.execute(query)
+		else:
+			self.cur.execute(query, params)
+		
+		self.columns = []
+		if not self.cur.description == None:
+			for col in self.cur.description:
+				self.columns.append(col.name)
+		
+	def __iter__(self):
+		return self
+	
+	def __next__(self):
+		if self.limit == 1:
+			result = self.cur.fetchone()
+			if result == None:
+				self.cur.close()
+				raise StopIteration
+			
+			return self.__toDict([result])[0]
+		else:
+			result = self.cur.fetchmany(self.limit)
+			if result == None:
+				self.cur.close()
+				raise StopIteration
+			
+			return self.__toDict(result)
+	
+	def cancel(self):
+		self.cur.close()
+	
+	def get(self):
+		try:
+			return self.__next__()
+		except StopIteration:
+			return {}
+
 class helper(): # thread safe
 	def __init__(self, conf):
 		self.conf = conf
@@ -14,7 +72,7 @@ class helper(): # thread safe
 	def toJSON(self, table, columns, curs):
 		return self.__toJSON(table, columns, curs)
 	
-	def __toJSON(self, table, columns, curs): # for backward compactibility
+	def __toJSON(self, table, columns, curs): # for backward compactibility, legacy code support
 		data = {}
 		if curs.rowcount == 0:
 			return data
@@ -29,7 +87,7 @@ class helper(): # thread safe
 			data[ident] = col
 		return data
 	
-	def userExists(self, userid, data={}):
+	"""def userExists(self, userid, data={}):
 		if userid in data:
 			return True
 		
@@ -51,9 +109,9 @@ class helper(): # thread safe
 			cur.close()
 			return result, out
 		cur.close()
-		return result, {}
+		return result, {}"""
 	
-	def isAuthorizedGroup(self, groupid, output=None):
+	def isAuthorizedGroup(self, groupid, output=None): # legacy code support
 		if output == None:
 			output = self.sendToPostgres(self.conf["getgroup"], (groupid,))
 			if len(output) > 0:
@@ -64,7 +122,7 @@ class helper(): # thread safe
 				return True
 			return False
 	
-	def userHasLevel(self, userid, level, data={}):
+	"""def userHasLevel(self, userid, level, data={}):
 		userid = str(userid)
 		if self.userExists(userid, data):
 			result, data = self.getuserlevel(userid, data)
@@ -77,9 +135,9 @@ class helper(): # thread safe
 			
 			if result == level:
 				return True
-		return False
+		return False"""
 	
-	def resolveUsername(self, username, output={}):
+	"""def resolveUsername(self, username, output={}):
 		if username is int or username is float:
 			return username, output
 		
@@ -91,18 +149,18 @@ class helper(): # thread safe
 			for user in output:
 				return str(user), output
 		
-		return "error - user not existing", {}
+		return "error - user not existing", {}"""
 	
-	def getuserlevel(self, userid, output={}):
+	"""def getuserlevel(self, userid, output={}):
 		if len(output) == 0:
 			output = self.sendToPostgres(self.conf["getuser"], (str(userid),))
 		
 		if len(output) == 0:
 			return "error - user not existing", {}
 		for user in output:
-			return output[user]["level"], output
+			return output[user]["level"], output"""
 	
-	def getCursor(self, query, params=()):
+	def getCursor(self, query, params=()): # legacy code support
 		if self.lock == True:
 			return None
 		
@@ -114,7 +172,7 @@ class helper(): # thread safe
 		
 		return cur
 	
-	def getOneRow(self, cursor):
+	def getOneRow(self, cursor): # legacy code support
 		if self.lock == True:
 			self.closeCursor(cursor)
 			return None
@@ -128,10 +186,12 @@ class helper(): # thread safe
 			return None
 		return self.__toJSON([result], columns, cursor)
 	
-	def closeCursor(self, cursor):
+	def closeCursor(self, cursor): # legacy code support
 		cursor.close()
 	
-	def sendToPostgres(self, query, params=(), limit=20):
+	def getResult(self, query, param, limit=1):
+		return Record(self.conn, query, param, limit)
+	def sendToPostgres(self, query, params=(), limit=20): # legacy code support
 		if self.lock == False:
 			output = {}
 			self.canShutdown = False
@@ -153,7 +213,7 @@ class helper(): # thread safe
 		else:
 			return "error - shutting down"
 	
-	def tearDown(self):
+	def tearDown(self): # legacy code support
 		self.lock = True
 		while self.canShutdown == False:
 			pass

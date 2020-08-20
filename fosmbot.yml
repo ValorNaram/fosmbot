@@ -91,7 +91,7 @@ table_users:
   - displayname text
   - level text
   - comment text
-  - issuedbyid int
+  - issuedbyid text
   - ts timestamp
   - groups jsonb
 
