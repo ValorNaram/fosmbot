@@ -204,7 +204,7 @@ class commandControl():
 			except (pyrogram.errors.ChatAdminRequired):
 				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
-				commander.removegroup(None, message, None, None, None):
+				commander.removegroup(None, message, None, None, None)
 			except:
 				pass
 			
@@ -223,7 +223,7 @@ class commandControl():
 			except (pyrogram.errors.ChatAdminRequired):
 				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
-				commander.removegroup(None, message, None, None, None):
+				commander.removegroup(None, message, None, None, None)
 			except:
 				pass
 		
@@ -926,7 +926,7 @@ async def banUserIfnecessary(message, user):
 			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
 		except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
-			commander.removegroup(None, message, None, None, None):
+			commander.removegroup(None, message, None, None, None)
 		except:
 			pass
 	
