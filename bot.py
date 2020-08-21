@@ -99,7 +99,7 @@ class commandControl():
 	def noncmd_createtempuserrecord(self, userid, username, displayname):
 		userid = str(userid)
 		return {"id": userid, "username": str(username.lower().replace("@", "")), "displayname": displayname, "level": "user", "level_int": config["LEVELS"].index("user"), "comment": "", "issuedbyid": None, "groups": {}, "ts": self.createTimestamp()}
-	async def __canTouchUser(self, message, issuer_level_int, targetuserdata):
+	async def __canTouchUser(self, message, issuer_level_int, targetuser):
 		"""
 		Checks, if the user can touch the user in question
 		
@@ -107,8 +107,8 @@ class commandControl():
 		  - `message` _object_: message object as returned by Pyrogram (https://docs.pyrogram.org/api/types/Message?highlight=message).
 		  - `userInQuestion` _string_: the telegram id of the user which the issuer wants to touch.
 		  - `issuer_level` _int_: the level of the user which executes this command (issuer).
-		  - `targetuserdata` _dict_: the record the bot has about the user which the issuer wants to touch.
-		Checks, if the user which executes the command ('issuer_level') has the right to touch the user (to change the record of them) (`userInQuestion`, `targetuserdata`)
+		  - `targetuser` _dict_: the record the bot has about the user which the issuer wants to touch.
+		Checks, if the user which executes the command ('issuer_level') has the right to touch the user (to change the record of them) (`userInQuestion`, `targetuser`)
 		
 		Returns:
 		  Boolean indicating if the issuer can touch the user in question or not
@@ -123,9 +123,9 @@ class commandControl():
 		  True
 		
 		Answer:
-		  It returns `True` which means that the issuer can touch the user (`userInQuestion`, `targetuserdata`)
+		  It returns `True` which means that the issuer can touch the user (`userInQuestion`, `targetuser`)
 		"""
-		userInQuestion_level_int = config["LEVELS"].index(targetuserdata["level"])
+		userInQuestion_level_int = config["LEVELS"].index(targetuser["level"])
 		if userInQuestion_level_int > issuer_level_int: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
 			return True
 		await self.__replySilence(message, "You don't have the necessary rights to touch the user!")
@@ -135,7 +135,7 @@ class commandControl():
 		"""
 		Creates an anoymous record for `userid` _int_ (telegram id) in cases the issuer wants to perform an operation on an user the bot does not know.
 		
-		It returns `targetuserdata` _dict_:
+		It returns `targetuser` _dict_:
 		
 		```python3
 		{"id": 1234, "username": "foobar", "displayname": "Foo Bar", "level": "fedadmin", "comment": "", "issuedbyid": None, "groups": {}, "ts": "2020-12-01 00:00:00"}}
@@ -192,43 +192,43 @@ class commandControl():
 		
 		return username.lower()
 	
-	async def noncmd_performBan(self, message, issuer, targetuserdata): # belongs to fosmbot's core
-		targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
-		targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
+	async def noncmd_performBan(self, message, issuer, targetuser): # belongs to fosmbot's core
+		targetuser["id"] = self.telegramidorusername(targetuser["id"])
+		targetuser["username"] = self.telegramidorusername(targetuser["username"])
 		
-		for group in targetuserdata["groups"]:
+		for group in targetuser["groups"]:
 			if not int(group) in config["groupslist"]:
 				continue
 			try:
-				await app.kick_chat_member(int(group), targetuserdata["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+				await app.kick_chat_member(int(group), targetuser["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 			except (pyrogram.errors.ChatAdminRequired):
-				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuser))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 				commander.removegroup(None, message, None, None, None)
 			except:
 				pass
 			
-		target = self.telegramidorusername(targetuserdata["id"])
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuserdata, target))
+		target = self.telegramidorusername(targetuser["id"])
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuser, target))
 	
-	async def __performUnban(self, message, issuer, targetuserdata):
-		targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
-		targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
+	async def __performUnban(self, message, issuer, targetuser):
+		targetuser["id"] = self.telegramidorusername(targetuser["id"])
+		targetuser["username"] = self.telegramidorusername(targetuser["username"])
 		
-		for group in targetuserdata["groups"]:
+		for group in targetuser["groups"]:
 			if not int(group) in config["groupslist"]:
 				continue
 			try:
-				app.unban_chat_member(int(group), targetuserdata["id"])
+				app.unban_chat_member(int(group), targetuser["id"])
 			except (pyrogram.errors.ChatAdminRequired):
-				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuser))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 				commander.removegroup(None, message, None, None, None)
 			except:
 				pass
 		
-		target = self.telegramidorusername(targetuserdata["id"])
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups'.".format(issuer, targetuserdata, target))
+		target = self.telegramidorusername(targetuser["id"])
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups'.".format(issuer, targetuser, target))
 	
 	async def __ownerCannotDo(self, message):
 		await message.reply("An owner cannot do this", disable_web_page_preview=True, parse_mode="md")
@@ -257,8 +257,8 @@ class commandControl():
 			await app.send_message(int(config["logchannel"]), text, disable_web_page_preview=True, parse_mode="md")
 		await self.__replySilence(message, text)
 	
-	async def __userisimmun(self, targetuserdata):
-		await self.__replySilence(message, "The user [{0[displayname]}](tg://user?id={0[id]}) is immun against this!".format(targetuserdata))
+	async def __userisimmun(self, targetuser):
+		await self.__replySilence(message, "The user [{0[displayname]}](tg://user?id={0[id]}) is immun against this!".format(targetuser))
 	
 	def noncmd_getDisplayname(self, user): # belongs to fosmbot's core
 		displayname = []
@@ -276,7 +276,7 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
-	async def userid(self, client, message, userlevel, userlevel_int, userdata):
+	async def userid(self, client, message, issuer):
 		out = []
 		forwarded = False
 		message = message.reply_to_message
@@ -294,7 +294,7 @@ class commandControl():
 		
 		await self.__replySilence(message, " ".join(out))
 	
-	async def viewgroups(self, client, message, userlevel, userlevel_int, userdata):
+	async def viewgroups(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
@@ -308,31 +308,31 @@ class commandControl():
 		
 		await self.__reply(message, "\n".join(out))
 		
-	async def removerecord(self, client, message, userlevel, userlevel_int, userdata):
+	async def removerecord(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
-		targetuserdata = {}
+		targetuser = {}
 		command = message.command
 		
 		targetuserInQuestion = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, targetuserInQuestion)
 				return False
 			targetuserInQuestion = command[0].replace("@", "")
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get()
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 		
 		targetuserInQuestion_id = command[0]
 		del command[0]
 		
 		dbhelper.sendToPostgres(config["removeuser"], (targetuserInQuestion_id,))
-		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list.".format(targetuserdata))
+		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list.".format(targetuser))
 	
-	async def addrecord(self, client, message, userlevel, userlevel_int, userdata):
+	async def addrecord(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
@@ -342,10 +342,10 @@ class commandControl():
 			dbhelper.sendToPostgres(config["adduser"], (command[1], command[0], "Anonymous User {}".format(command[0]), self.createTimestamp()))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
 		elif len(command) == 1:
-			dbhelper.sendToPostgres(config["adduser"], (command[0], str(command[0]), "Anonymous User {}".format(command[0]), self.createTimestamp()))
+			dbhelper.sendToPostgres(config["adduser"], (command[0], command[0], "Anonymous User {}".format(command[0]), self.createTimestamp()))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
 	
-	async def help(self, client, message, userlevel, userlevel_int, userdata):
+	async def help(self, client, message, issuer):
 		if not message.chat.type == "private":
 			await self.__replySilence(message, "Please issue that command in the private chat with me in order to view the help.")
 			return False
@@ -359,24 +359,24 @@ class commandControl():
 		else:
 			await self.__reply(message, "**No help available**")
 	
-	async def start(self, client, message, userlevel, userlevel_int, userdata):
-		await self.help(client, message, userlevel, userlevel_int, userdata)
+	async def start(self, client, message, issuer):
+		await self.help(client, message, issuer)
 	
-	async def mydata(self, client, message, userlevel, userlevel_int, userdata):
+	async def mydata(self, client, message, issuer):
 		if not message.chat.type == "private":
 			await self.__replySilence("Please request access to insights of the data we have about you by issueing that command in private chat with me.")
 			return False
 		
-		targetuserdata = dbhelper.getResult(config["getuser"], (str(message.from_user.id),)).get()
-		if not len(targetuserdata) == 0:
+		targetuser = dbhelper.getResult(config["getuser"], (str(message.from_user.id),)).get()
+		if not len(targetuser) == 0:
 			message.command = [str(message.from_user.id)]
 			await self.__reply(message, "The data we have about you (nothing critical):")
-			await self.userstat(client, message, userlevel, userlevel_int, userdata, ["issuedbyid"])
+			await self.userstat(client, message, user, ["issuedbyid"])
 			await self.__reply(message, "One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet. In this case the 'comment' field does not contain anything.")
 		else:
 			await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
 	
-	async def privacypolicy(self, client, message, userlevel, userlevel_int, userdata):
+	async def privacypolicy(self, client, message, issuer):
 		if not message.chat.type == "private":
 			await self.__replySilence(message, "Please issue that command in the private chat with me in order to view the privacy policy.")
 			return False
@@ -390,8 +390,8 @@ class commandControl():
 		else:
 			await self.__reply(message, "**No Privacy Policy available**")
 	
-	async def changecomment(self, client, message, userlevel, userlevel_int, userdata):
-		targetuserdata = {}
+	async def changecomment(self, client, message, issuer):
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
@@ -406,29 +406,29 @@ class commandControl():
 		
 		targetuserInQuestion = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, targetuserInQuestion)
 				return False
 			targetuserInQuestion = command[0].replace("@", "")
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		targetuserInQuestion_id = command[0]
 		
 		del command[0]
 		
-		if not await self.__canTouchUser(message, userlevel_int, targetuserdata):# or targetuserInQuestion_id in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):# or targetuserInQuestion_id in config["botownerrecord"]:
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), targetuserInQuestion_id))
-		await self.__reply(message, "Comment about [{0[displayname]}](tg://user?id={0[id]}) changed".format(targetuserdata))
+		await self.__reply(message, "Comment about [{0[displayname]}](tg://user?id={0[id]}) changed".format(targetuser))
 	
-	async def testme(self, client, message, userlevel, userlevel_int, userdata):
+	async def testme(self, client, message, issuer):
 		await self.__replySilence(message, "Tested me!")
 	
-	async def changelevel(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
-		targetuserdata = {}
+	async def changelevel(self, client, message, issuer): # belongs to fosmbot's core
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
@@ -446,39 +446,41 @@ class commandControl():
 		except:
 			await self.__replySilence(message, "Level `{}` does not exist!".format(command[1]))
 		
-		if not levelToPromoteTo_int > userlevel_int: # if true, then the user who issued that command has no rights to promote <user> to <level>
+		if not levelToPromoteTo_int > issuer["level_int"]: # if true, then the user who issued that command has no rights to promote <user> to <level>
+			self.__replySilence(message, "You cannot use that command to promote a user to a higher level or even to your level")
 			return False # user does not have the right to promote <user> to <level>
 		
 		command[0] = str(command[0])
 		userToPromote = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, userToPromote)
 				return False
 			command[0] = command[0].replace("@", "")
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		
-		if not await self.__canTouchUser(message, userlevel_int, targetuserdata):# or command[0] in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):# or command[0] in config["botownerrecord"]:
+			self.__replySilence(message, "You cannot use that command to promote a user with a higher level or even equal to yours")
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], (command[1], command[0]))
-		await self.__logGroup(message, "User [{0[displayname]}](tg://user?id={0[id]}) is now a `{1}` one as requested by [{2[displayname]}](tg://user?id={2[id]}) with level `{2[level]}`".format(targetuserdata, command[1], userdata))
+		await self.__logGroup(message, "User [{0[displayname]}](tg://user?id={0[id]}) is now a `{1}` one as requested by [{2[displayname]}](tg://user?id={2[id]}) with level `{2[level]}`".format(targetuser, command[1], issuer))
 	
-	async def demoteme(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def demoteme(self, client, message, issuer): # belongs to fosmbot's core
 		if not message.chat.type == "private":
 			return False
 		
-		if userlevel_int == 0:
+		if issuer["level_int"] == 0:
 			await self.__ownerCannotDo(message)
 		else:
 			dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
 			await self.__reply(message, "You are now powerless! Thank You for your effort to cut down spammers!")
 	
-	async def funban(self, client, message, userlevel, userlevel_int, userdata):
-		targetuserdata = {}
+	async def funban(self, client, message, issuer):
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
@@ -493,28 +495,27 @@ class commandControl():
 		
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
 			command[0] = command[0].replace("@", "")
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		
-		if not targetuserdata["level"] == "banned": #dbhelper.userHasLevel(command[0], "banned", targetuserdata):
+		if not targetuser["level"] == "banned": #dbhelper.userHasLevel(command[0], "banned", targetuser):
 			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, str(command[0])))
 			return False
 		
-		logging.info(str(type(command[0])) + " " + str(command[0]))
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", command[0]))
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), command[0]))
 		dbhelper.sendToPostgres(config["changelevel"], ("user", command[0]))
 		
-		await self.__performUnban(message, userdata, targetuserdata)
+		await self.__performUnban(message, issuer, targetuser)
 	
-	async def fban(self, client, message, userlevel, userlevel_int, userdata):
-		targetuserdata = {}
+	async def fban(self, client, message, issuer):
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
@@ -533,65 +534,65 @@ class commandControl():
 		
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				#await self.__userNotFound(message, userinput)
 				#return False
 				userinput = userinput.lower().replace("@", "")
 				dbhelper.sendToPostgres(config["adduser"], (userinput, userinput, "Anonymous User {}".format(userinput), self.createTimestamp()))
-				targetuserdata = self.noncmd_createtempuserrecord(userinput, userinput, "Anonymous User {}".format(userinput))
+				targetuser = self.noncmd_createtempuserrecord(userinput, userinput, "Anonymous User {}".format(userinput))
 				command[0] = userinput
-				logging.info(targetuserdata)
+				logging.info(targetuser)
 			command[0] = command[0].replace("@", "")
 		
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		toban = command[0]
 		del command[0]
 		
-		if len(targetuserdata) == 0:
-			targetuserdata = self.noncmd_createAnonymousRecord(toban)
+		if len(targetuser) == 0:
+			targetuser = self.noncmd_createAnonymousRecord(toban)
 		
-		if not await self.__canTouchUser(message, userlevel_int, targetuserdata):
+		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
 		
-		if targetuserdata["level"] == "banned": #dbhelper.userHasLevel(toban, "banned", targetuserdata):
+		if targetuser["level"] == "banned": #dbhelper.userHasLevel(toban, "banned", targetuser):
 			#await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
 			message.command = [toban, " ".join(command)]
 			
-			await self.changecomment(client, message, userlevel, userlevel_int, userdata)
+			await self.changecomment(client, message, issuer)
 			return False
 		
-		toban_level = targetuserdata["level"]
+		toban_level = targetuser["level"]
 		if "immunity" in config and toban_level in config["immunity"]:# or toban in config["botownerrecord"]: # bug here but another security system prevents from unattended owner overwrite so it is not dramatic to deactivate this here
-			await self.__userisimmun(targetuserdata);
+			await self.__userisimmun(targetuser);
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
 		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), toban))
 		dbhelper.sendToPostgres(config["changelevel"], ("banned", toban))
 		
-		targetuserdata["comment"] = " ".join(command)
-		targetuserdata["issuedbyid"] = str(message.from_user.id)
+		targetuser["comment"] = " ".join(command)
+		targetuser["issuedbyid"] = str(message.from_user.id)
 		
-		await self.noncmd_performBan(message, userdata, targetuserdata)
+		await self.noncmd_performBan(message, issuer, targetuser)
 		
-	async def newowner(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
-		targetuserdata = {}
+	async def newowner(self, client, message, issuer): # belongs to fosmbot's core
+		targetuser = {}
 		command = message.command
 		
 		if len(command) == 0:
 			await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation. Syntax: `/newowner <username or id>`")
 			return False
-		if not userlevel_int == 0:
+		if not issuer["level_int"] == 0:
 			return False
 		
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
 				await self.__userNotFound(message, userinput)
 				return False
@@ -604,10 +605,10 @@ class commandControl():
 				return False
 		command[0] = int(command[0])
 		
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
 		
-		if not len(targetuserdata) == 0:
+		if not len(targetuser) == 0:
 			await self.__userNotFound(message, userinput)
 			return False
 		
@@ -616,11 +617,11 @@ class commandControl():
 		
 		changeOwnerInFile(command[0])
 		config["botowner"] = command[0]
-		config["botownerrecord"] = targetuserdata
+		config["botownerrecord"] = targetuser
 		
-		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?id={0[id]}) to [{0[displayname]}](tg://user?id={0[id]}). The new ownership will be ensured by a file on the server".format(userdata, targetuserdata))
+		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?id={0[id]}) to [{0[displayname]}](tg://user?id={0[id]}). The new ownership will be ensured by a file on the server".format(issuer, targetuser))
 	
-	async def addgroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def addgroup(self, client, message, issuer): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
 			return False
 		
@@ -631,7 +632,7 @@ class commandControl():
 			config["groupslist"][message.chat.id] = {"id": message.chat.id, "username": username}
 			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
 	
-	async def removegroup(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def removegroup(self, client, message, issuer): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
 			return False
 		
@@ -641,7 +642,7 @@ class commandControl():
 			del config["groupslist"][message.chat.id]
 			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat.title, message.chat.id))
 	
-	async def search(self, client, message, userlevel, userlevel_int, userdata):
+	async def search(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
@@ -658,8 +659,8 @@ class commandControl():
 		
 		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			user["id"] = self.telegramidorusername(user["id"])
-			user["username"] = self.telegramidorusername(user["username"])
+			issuer["id"] = self.telegramidorusername(issuer["id"])
+			issuer["username"] = self.telegramidorusername(issuer["username"])
 			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), {0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
@@ -686,25 +687,25 @@ class commandControl():
 		else:
 			await self.__reply(message, "No data available!")
 	
-	async def owners(self, client, message, userlevel, userlevel_int, userdata):
+	async def owners(self, client, message, issuer):
 		await self.__returnusers(message, config["LEVELS"][0])
 		
-	async def fedadmins(self, client, message, userlevel, userlevel_int, userdata):
+	async def fedadmins(self, client, message, issuer):
 		await self.__returnusers(message, "fedadmin")
 	
-	async def superadmins(self, client, message, userlevel, userlevel_int, userdata):
+	async def superadmins(self, client, message, issuer):
 		await self.__returnusers(message, "superadmin")
 	
-	async def viewbanreason(self, client, message, userlevel, userlevel_int, userdata):
+	async def viewbanreason(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
-		if userdata["level"] == "banned": #dbhelper.userHasLevel(str(message.from_user.id), "banned", userdata):
-			await self.mystat(client, message, userlevel, userlevel_int, userdata)
+		if issuer["level"] == "banned":
+			await self.mystat(client, message, issuer)
 		else:
 			await self.__reply(message, "You are not a banned one!")
 	
-	async def fbanlist(self, client, message, userlevel, userlevel_int, userdata):
+	async def fbanlist(self, client, message, issuer):
 		output = ["id,username,displayname,reason,issued by,kicked from groups"]
 		fields = ["id", "username", "displayname", "comment", "issuedbyid", "groups"]
 		
@@ -734,8 +735,8 @@ class commandControl():
 		
 		await message.reply_document("files/fbanlist.csv")
 	
-	async def userstat(self, client, message, userlevel, userlevel_int, userdata, exclude=[]):
-		targetuserdata = {}
+	async def userstat(self, client, message, issuer, exclude=[]):
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
@@ -751,69 +752,69 @@ class commandControl():
 		command[0] = str(command[0])
 		userinput = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuserdata = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuserdata = dbhelper.resolveUsername(command[0])
-			if len(targetuserdata) == 0:
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
 			command[0] = command[0].replace("@", "")
-		if command[0] in userdata["id"]:
-			targetuserdata = userdata
-		if len(targetuserdata) == 0:
-			targetuserdata = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
-			if len(targetuserdata) == 0:
+		if command[0] in issuer["id"]:
+			targetuser = issuer
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
 		
-		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuserdata)]
+		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuser)]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
-		for i in targetuserdata:
-			targetuserdata["id"] = self.telegramidorusername(targetuserdata["id"])
-			targetuserdata["username"] = self.telegramidorusername(targetuserdata["username"])
+		for i in targetuser:
+			targetuser["id"] = self.telegramidorusername(targetuser["id"])
+			targetuser["username"] = self.telegramidorusername(targetuser["username"])
 			label = i
 			if i == "groups":
 				groupslist = []
-				for g in targetuserdata["groups"]:
-					groupslist.append("@" + targetuserdata["groups"][g])
-				targetuserdata["groups"] = ", ".join(groupslist)
+				for g in targetuser["groups"]:
+					groupslist.append("@" + targetuser["groups"][g])
+				targetuser["groups"] = ", ".join(groupslist)
 			if label in columntrans:
 				label = str(columntrans[i])
 			if not i in exclude:
-				output.append("**{}**: {}".format(label, targetuserdata[i]))
+				output.append("**{}**: {}".format(label, targetuser[i]))
 		
 		await self.__reply(message, "\n".join(output))
 	
-	async def mystat(self, client, message, userlevel, userlevel_int, userdata):
+	async def mystat(self, client, message, issuer):
 		message.command = [str(message.from_user.id)]
-		await self.userstat(client, message, userlevel, userlevel_int, userdata, ["issuedbyid"])
+		await self.userstat(client, message, issuer, ["issuedbyid"])
 	
-	async def mylevel(self, client, message, userlevel, userlevel_int, userdata):
+	async def mylevel(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
 		
 		await self.__reply(message, "You are {}".format(userlevel))
 	
-	async def groupid(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def groupid(self, client, message, issuer): # belongs to fosmbot's core
 		if "chat" in dir(message) and message.chat is not None:
 			await self.__replySilence(message, "Chat id: `{}`".format(message.chat.id))
 	
-	async def myid(self, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def myid(self, client, message, issuer): # belongs to fosmbot's core
 		if not message.chat.type == "private":
 			return False
 		
 		await self.__replySilence(message, "Your id: `{}`".format(message.from_user.id))
 	
-	async def groupauthorized(self, client, message, userlevel, userlevel_int, userdata):  # belongs to fosmbot's core
+	async def groupauthorized(self, client, message, issuer):  # belongs to fosmbot's core
 		if message.chat.id in config["groupslist"]:
 			await self.__replySilence(message, "This group is an authorized one!")
 		else:
 			await self.__replySilence(message, "This group is **not** an authorized one!")
 	
-	async def execCommand(self, command, client, message, userlevel, userlevel_int, userdata): # belongs to fosmbot's core
+	async def execCommand(self, command, client, message, issuer): # belongs to fosmbot's core
 		if not command[0].startswith("__") or not command[0].startswith("noncmd"):
 			func = message.command[0]
 			del message.command[0]
-			await self.__getattribute__(func)(client, message, userlevel, userlevel_int, userdata)
+			await self.__getattribute__(func)(client, message, issuer)
 
 def main(): # belongs to fosmbot's core
 	global config, dbhelper, commander, allcommands, app
@@ -943,10 +944,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 		command = [command]
 		message.command = [message.command]
 	
-	userlevel = user["level"]
-	userlevel_int = user["level_int"]
-	
-	for i in range(userlevel_int, len(config["LEVELS"])):
+	for i in range(user["level_int"], len(config["LEVELS"])):
 		if command[0] in config["LEVEL_" + config["LEVELS"][i].upper()]:
 			objid = 0
 			if "chat" in dir(message) and message.chat is not None:
@@ -957,11 +955,11 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 			if "groupspecified" in config:
 				if command[0] in config["groupspecified"]:
 					if not objid == 0 and objid in config["groupspecified"][command[0]]:
-						await commander.execCommand(command, client, message, userlevel, userlevel_int, user)
+						await commander.execCommand(command, client, message, user)
 						return True
 					elif command[0].startswith("can_"):
 						if await commander.noncmd_userHasLocalChatPermission(message, user, command[0]):
-							await commander.execCommand(command, client, message, userlevel, userlevel_int, user)
+							await commander.execCommand(command, client, message, user)
 							return True
 						else:
 							await message.reply("Command not available to you. You need the '{}' for this group.", parse_mode="md")
@@ -970,10 +968,10 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
 						return False
 			
-			await commander.execCommand(command, client, message, userlevel, userlevel_int, user)
+			await commander.execCommand(command, client, message, user)
 			return True
 	
-	out = ["Insufficient rights. You are: {}".format(userlevel)]
+	out = ["Insufficient rights. You are: {}".format(user["level"])]
 	if "pseudoProfile" in user:
 		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet!")
 	await message.reply("\n".join(out), disable_web_page_preview=True, parse_mode="md")
