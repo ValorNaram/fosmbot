@@ -201,12 +201,13 @@ class commandControl():
 				continue
 			try:
 				await app.kick_chat_member(int(group), targetuserdata["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+			except (pyrogram.errors.ChatAdminRequired):
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
+			except: (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
+				commander.removegroup(None, message, None, None, None):
 			except:
-				try:
-					await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuserdata))
-				except:	
-					pass
-		
+				pass
+			
 		target = self.telegramidorusername(targetuserdata["id"])
 		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuserdata, target))
 	
@@ -217,11 +218,14 @@ class commandControl():
 		for group in targetuserdata["groups"]:
 			if not int(group) in config["groupslist"]:
 				continue
-			if not await app.unban_chat_member(int(group), targetuserdata["id"]):
-				try:
-					await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
-				except:
-					pass
+			try:
+				app.unban_chat_member(int(group), targetuserdata["id"]):
+			except (pyrogram.errors.ChatAdminRequired):
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuserdata))
+			except: (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
+				commander.removegroup(None, message, None, None, None):
+			except:
+				pass
 		
 		target = self.telegramidorusername(targetuserdata["id"])
 		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups'.".format(issuer, targetuserdata, target))
@@ -869,7 +873,6 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	canReturn = False
 	userexists = False
 	out = dbhelper.getResult(config["getuser"], (str(user.id),), limit=1).get()
-	out["level_int"] = config["LEVELS"].index(out["level"])
 	if len(out) > 0:
 		userexists = True
 		
@@ -903,7 +906,8 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			if len(out) > 1:
 				out["level"] = config["LEVELS"][0]
 			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
-	
+	else:
+		out["level_int"] = config["LEVELS"].index(out["level"])
 	if chat == "private" and not userexists or chat == "channel" and not userexists:
 		out["pseudoProfile"] = True
 	
@@ -918,9 +922,13 @@ async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
 		try:
 			await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-		except:
+		except (pyrogram.errors.ChatAdminRequired):
 			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
+		except: (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
+			commander.removegroup(None, message, None, None, None):
+		except:
+			pass
 	
 	addToGroup(message, user)
 
