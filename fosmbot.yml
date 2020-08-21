@@ -66,7 +66,7 @@ adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');
 getuser: select * from users where id=%s;
 getuserbyusername: select * from users where username=%s LIMIT 1;
 getusersbylevel: select * from users where level=%s;
-getusersbydisplayname: select * from users where displayname like %s;
+getusersbydisplayname: select * from users where lower(displayname) like lower(%s);
 removeuser: delete from users where id=%s;
 removegroupfromuser: update users set groups=groups - '{}' where id={}; # necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
 addgrouptouser: update users set groups=groups || %s where id=%s;

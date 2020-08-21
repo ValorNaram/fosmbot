@@ -493,19 +493,18 @@ class commandControl():
 			await self.__reply(message, "Syntax: `/funban <username or id>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
-		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+		userinput = command[0].lower()
+		command[0] = userinput.replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
-			command[0] = command[0].replace("@", "")
 		if len(targetuser) == 0:
 			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 		
 		if not targetuser["level"] == "banned":
-			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, str(command[0])))
+			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, command[0]))
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", command[0]))
@@ -532,19 +531,13 @@ class commandControl():
 			#return False
 			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
 		
-		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+		userinput = command[0].lower()
+		command[0] = userinput.replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
-				#await self.__userNotFound(message, userinput)
-				#return False
-				userinput = userinput.lower().replace("@", "")
-				dbhelper.sendToPostgres(config["adduser"], (userinput, userinput, "Anonymous User {}".format(userinput), self.createTimestamp()))
-				targetuser = self.noncmd_createtempuserrecord(userinput, userinput, "Anonymous User {}".format(userinput))
-				command[0] = userinput
-				logging.info(targetuser)
-			command[0] = command[0].replace("@", "")
+				dbhelper.sendToPostgres(config["adduser"], (command[0], command[0], "Anonymous User {}".format(userinput), self.createTimestamp()))
+				targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(userinput))
 		
 		if len(targetuser) == 0:
 			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
@@ -587,15 +580,14 @@ class commandControl():
 		if not issuer["level_int"] == 0:
 			return False
 		
-		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+		userinput = command[0].lower()
+		command[0] = userinput.replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
 				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
 				await self.__userNotFound(message, userinput)
 				return False
-			command[0] = command[0].replace("@", "")
 			
 			try:
 				int(command[0])
@@ -748,15 +740,14 @@ class commandControl():
 			await self.__reply(message, "Syntax `/userstat <username or id>` not used.")
 			return True
 		
-		command[0] = str(command[0])
-		userinput = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
+		userinput = command[0].lower()
+		command[0] = userinput.replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			#command[0], targetuser = dbhelper.resolveUsername(command[0])
 			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
-			command[0] = command[0].replace("@", "")
 		if command[0] in issuer["id"]:
 			targetuser = issuer
 		if len(targetuser) == 0:
