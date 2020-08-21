@@ -282,7 +282,7 @@ class commandControl():
 		message = message.reply_to_message
 		
 		if "forward_from" in dir(message) and message.forward_from is not None:
-			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.forward_from.from_user), message.forward_from.from_user.id, message.forward_from.from_user.id))
+			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.forward_from), message.forward_from.id, message.forward_from.id))
 			forwarded = True
 		
 		if forwarded:
@@ -1001,7 +1001,7 @@ async def userleaves(client, message):
 	if message.chat.type == "channel":
 		return False
 	
-	if len(groups) == 0 or not message.chat.id in user["groups"]:
+	if message.chat.id in user["groups"]:
 		return False
 	
 	dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
