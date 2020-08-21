@@ -648,10 +648,10 @@ class commandControl():
 		for user in output:
 			users.append(output[user])
 		
-		output = ["Search results for users having or containing the name '{}':".format(" ".join(command))]
+		output = ["Case-Insensitive search results for users having or containing the name '{}':".format(" ".join(command))]
 		for user in users:
-			issuer["id"] = self.telegramidorusername(issuer["id"])
-			issuer["username"] = self.telegramidorusername(issuer["username"])
+			user["id"] = self.telegramidorusername(user["id"])
+			user["username"] = self.telegramidorusername(user["username"])
 			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), {0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
