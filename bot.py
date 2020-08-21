@@ -502,9 +502,9 @@ class commandControl():
 				return False
 			command[0] = command[0].replace("@", "")
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 		
-		if not targetuser["level"] == "banned": #dbhelper.userHasLevel(command[0], "banned", targetuser):
+		if not targetuser["level"] == "banned":
 			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, str(command[0])))
 			return False
 		
@@ -557,8 +557,7 @@ class commandControl():
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
 		
-		if targetuser["level"] == "banned": #dbhelper.userHasLevel(toban, "banned", targetuser):
-			#await self.__replySilence(message, "User [{}](tg://user?id={}) already banned".format(userinput, toban))
+		if targetuser["level"] == "banned":
 			message.command = [toban, " ".join(command)]
 			
 			await self.changecomment(client, message, issuer)
@@ -792,7 +791,7 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		await self.__reply(message, "You are {}".format(userlevel))
+		await self.__reply(message, "You are {}".format(issuer["level"]))
 	
 	async def groupid(self, client, message, issuer): # belongs to fosmbot's core
 		if "chat" in dir(message) and message.chat is not None:
@@ -902,7 +901,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if user.id == config["botowner"]:
 		config["botownerrecord"] = out
 		out["level_int"] = 0
-		if not out["level"] == config["LEVELS"][0]:# dbhelper.userHasLevel(config["botowner"], config["LEVELS"][0], out):
+		if not out["level"] == config["LEVELS"][0]:
 			dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], str(config["botowner"])))
 			if len(out) > 1:
 				out["level"] = config["LEVELS"][0]
