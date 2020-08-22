@@ -22,6 +22,9 @@ def readOwner(): # belongs to fosmbot's core
 	sfile.close
 	return filebuffer.replace("\n", "")
 
+def addUser(userid, username, displayname):
+	dbhelper.sendToPostgres(config["adduser"], (str(userid), str(username).lower(), displayname, commander.createTimestamp()))
+
 def createExpireTime(creationTime): # belongs to fosmbot's core
 	expireAt = config["DATABASE_ENTRY_EXPIRE_MONTH"]
 		
@@ -145,7 +148,7 @@ class commandControl():
 		displayname = "Anonymous User " + str(userid)
 
 		tscreated = commander.createTimestamp()
-		dbhelper.sendToPostgres(config["adduser"], (str(userid), str(userid), displayname, tscreated))
+		addUser(userid, userid, displayname)
 		
 		return self.noncmd_createtempuserrecord(userid, userid, displayname)
 	
@@ -339,10 +342,10 @@ class commandControl():
 		command = message.command
 		
 		if len(command) == 2:
-			dbhelper.sendToPostgres(config["adduser"], (command[1], command[0], "Anonymous User {}".format(command[0]), self.createTimestamp()))
+			addUser(command[1], command[0], "Anonymous User {}".format(command[0]))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
 		elif len(command) == 1:
-			dbhelper.sendToPostgres(config["adduser"], (command[0], command[0], "Anonymous User {}".format(command[0]), self.createTimestamp()))
+			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
 	
 	async def help(self, client, message, issuer):
@@ -536,7 +539,7 @@ class commandControl():
 		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
-				dbhelper.sendToPostgres(config["adduser"], (command[0], command[0], "Anonymous User {}".format(userinput), self.createTimestamp()))
+				addUser(command[0], command[0], "Anonymous User {}".format(userinput))
 				targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(userinput))
 		
 		if len(targetuser) == 0:
@@ -801,6 +804,14 @@ class commandControl():
 			await self.__replySilence(message, "This group is **not** an authorized one!")
 	
 	async def execCommand(self, command, client, message, issuer): # belongs to fosmbot's core
+		if "entities" in dir(message) and message.entities is not None:
+			for entity in message.entities:
+				if entity.type == "text_mention": # support for 'text_mention's
+					text = " ".join(message.command)
+					text = text.replace(self.noncmd_getDisplayname(entity.user))
+					message.command = text.split(" ")
+					message.command[1] = entity.user.id
+		
 		if not command[0].startswith("__") or not command[0].startswith("noncmd"):
 			func = message.command[0]
 			del message.command[0]
@@ -881,7 +892,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			dbhelper.sendToPostgres(config["updateuserid"], (str(user.id), user.username.lower()))
 	
 	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
-		dbhelper.sendToPostgres(config["adduser"], (str(user.id), user.username.lower(), displayname, commander.createTimestamp()))
+		addUser(user.id, user.username, displayname)
 	elif userexists:
 		dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
 		canReturn = True
