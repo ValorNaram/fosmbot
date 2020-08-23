@@ -808,7 +808,7 @@ class commandControl():
 			for entity in message.entities:
 				if entity.type == "text_mention": # support for 'text_mention's
 					text = " ".join(message.command)
-					text = text.replace(self.noncmd_getDisplayname(entity.user))
+					text = text.replace(self.noncmd_getDisplayname(entity.user), "")
 					message.command = text.split(" ")
 					message.command[1] = entity.user.id
 		
