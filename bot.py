@@ -810,7 +810,7 @@ class commandControl():
 					text = " ".join(message.command)
 					text = text.replace(self.noncmd_getDisplayname(entity.user), "")
 					message.command = text.split(" ")
-					message.command[1] = entity.user.id
+					message.command[1] = int(entity.user.id)
 		
 		if not command[0].startswith("__") or not command[0].startswith("noncmd"):
 			func = message.command[0]
