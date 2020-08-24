@@ -43,10 +43,13 @@ If you are in the bot records, then the bot will create also a record for users 
 **When will this data be updated?**
 Only if you are in the records already: The bot updates the record everytime you interact with the groups this bot is in or interact with the bot in private. If you chat with the bot in private and the bot already created a record for you because you were/are in one of our groups, then it also updates your record.
 
-**When will this data be deleted?**
-In order to protect our groups you cannot force us to delete your data because we need that data we collect in order to be able to ban you just in case you are spamming. However we keep records for 2 months and then delete them as they would have never existed. But the bot will always recreate it when you start to interact with our groups again. But you can message @valornaram so he can look if your data is still needed or not and can safely deleted.
+**When will this data be deleted? (Deletion rules)**
+In order to protect our groups you cannot force us to delete your data because we need that data we collect in order to be able to ban you just in case you are spamming. But you can message @valornaram so he can look if your data is still needed or not and can safely deleted. However we keep records for
+- 12 months for banned users (you can find out if you were banned by executing `/mylevel` in the private chat with this bot)
+- 2 months for (regular) users (you can find out if you are a (regular) user by executing `/mylevel` in the private chat with this bot)
+and then delete them as they would have never existed. But the bot will always recreate it when you start to interact with our groups again.
 
-But if you were banned or promoted to one of our admin levels your record won't get deleted. We keep data from banned users for our ban list and to be able to unban you in case we did a terrible mistake. We keep the data until we decide to delete them. And we keep data from promoted ones because otherwise they couldn't execute their power. However if promoted users get demoted and become __user__ again, then the deletion rule applies again.
+If you were promoted to one of our admin levels your record won't get deleted. We keep data from promoted ones because otherwise they couldn't execute their power. However if promoted users get demoted and become __user__ again, then the deletion rule applies again.
 
 **How can I view the data being collected about me?**
 Just start a private chat with our bot and issue `/mydata` to view them.
