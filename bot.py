@@ -918,7 +918,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 def addToGroup(message, user):
 	username = commander.noncmd_getChatUsername(message)
 	dbhelper.sendToPostgres(config["addgrouptouser"], ("{\"" + str(message.chat.id) + "\": \"" + username + "\"}", user["id"]))
-	user["groups"][message.chat.id] = username
+	user["groups"][str(message.chat.id)] = username
 
 async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
@@ -996,14 +996,13 @@ async def userjoins(client, message): # belongs to fosmbot's core
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
 	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
-	logging.info("User '{}'".format(user))
 	if len(user) == 0:
 		return False
 	
 	if message.chat.type == "channel":
 		return False
 	
-	if message.chat.id in user["groups"]:
+	if not str(message.chat.id) in user["groups"]:
 		return False
 	
 	dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
@@ -1015,7 +1014,7 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	if len(user) == 0:
 		return False
 	
-	if not message.chat.id in user["groups"] and not message.chat.type == "private" and not message.chat.type == "channel":
+	if not str(message.chat.id) in user["groups"] and not message.chat.type == "private" and not message.chat.type == "channel":
 		addToGroup(message, user)
 	
 	if "forward_from" in dir(message) and message.forward_from is not None:
