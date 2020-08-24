@@ -321,7 +321,6 @@ class commandControl():
 		targetuserInQuestion = command[0]
 		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
 			if len(targetuser) == 0:
 				await self.__userNotFound(message, targetuserInQuestion)
 				return False
@@ -333,7 +332,7 @@ class commandControl():
 		del command[0]
 		
 		dbhelper.sendToPostgres(config["removeuser"], (targetuserInQuestion_id,))
-		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list.".format(targetuser))
+		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list. To verify that you can execute `/userstat {0[id]}` in this chat.".format(targetuser))
 	
 	async def addrecord(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -373,9 +372,8 @@ class commandControl():
 		targetuser = dbhelper.getResult(config["getuser"], (str(message.from_user.id),)).get()
 		if not len(targetuser) == 0:
 			message.command = [str(message.from_user.id)]
-			await self.__reply(message, "The data we have about you (nothing critical):")
-			await self.userstat(client, message, user, ["issuedbyid"])
-			await self.__reply(message, "One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet. In this case the 'comment' field does not contain anything.")
+			await self.userstat(client, message, user, ["issuedbyid"], limitedmode=True)
+			await self.__reply(message, "The most critical data is your telegram id and telegram username. One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet (the 'comment' field does not contain anything). If you want to have this data removed, then message [this person](tg://user?id={}) and then we will look into it if having your data removed would not have a negative effect on our responsibility to keep unwanted users away from our groups.".format(config["botowner"]))
 		else:
 			await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
 	
@@ -530,8 +528,6 @@ class commandControl():
 			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		if not len(command) > 1:
-			#await self.__replySilence(message, "Please provide a reason to ban a user for {0[daystoban]} days. Syntax: `/fban <username or id> <reason>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question".format(config))
-			#return False
 			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
 		
 		userinput = command[0].lower()
@@ -695,9 +691,10 @@ class commandControl():
 			return False
 		
 		if issuer["level"] == "banned":
-			await self.mystat(client, message, issuer)
+			message.command = [str(message.from_user.id)]
+			await self.userstat(client, message, issuer, ["issuedbyid"], limitedmode=True)
 		else:
-			await self.__reply(message, "You are not a banned one!")
+			await self.__reply(message, "You are not a __banned__ one!")
 	
 	async def fbanlist(self, client, message, issuer):
 		output = ["id,username,displayname,reason,issued by,kicked from groups"]
@@ -729,16 +726,21 @@ class commandControl():
 		
 		await message.reply_document("files/fbanlist.csv")
 	
-	async def userstat(self, client, message, issuer, exclude=[]):
+	async def userstat(self, client, message, issuer, exclude=[], limitedmode=False):
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [str(message.reply_to_message.from_user.id)]
-			for i in command:
-				newcommand.append(i)
-			command = newcommand
-		
+		if not limitedmode:
+			if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+				newcommand = [str(message.reply_to_message.from_user.id)]
+				for i in command:
+					newcommand.append(i)
+				command = newcommand
+			if "forward_from" in dir(message) and message.forward_from is not None:
+				newcommand = [str(message.forward_from.id)]
+				for i in command:
+					newcommand.append(i)
+				command = newcommand
 		if len(command) == 0:
 			await self.__reply(message, "Syntax `/userstat <username or id>` not used.")
 			return True
@@ -747,20 +749,19 @@ class commandControl():
 		command[0] = userinput.replace("@", "")
 		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
 			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
 		if command[0] in issuer["id"]:
 			targetuser = issuer
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 			if len(targetuser) == 0:
 				await self.__userNotFound(message, userinput)
 				return False
 		
 		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuser)]
-		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups"}
+		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups", "level_int": "Numerical access level"}
 		for i in targetuser:
 			targetuser["id"] = self.telegramidorusername(targetuser["id"])
 			targetuser["username"] = self.telegramidorusername(targetuser["username"])
@@ -770,6 +771,8 @@ class commandControl():
 				for g in targetuser["groups"]:
 					groupslist.append("@" + targetuser["groups"][g])
 				targetuser["groups"] = ", ".join(groupslist)
+			if i == "issuedbyid":
+				targetuser["issuedbyid"] = "[this person](tg://user?id={})".format(targetuser["issuedbyid"])
 			if label in columntrans:
 				label = str(columntrans[i])
 			if not i in exclude:
@@ -779,7 +782,7 @@ class commandControl():
 	
 	async def mystat(self, client, message, issuer):
 		message.command = [str(message.from_user.id)]
-		await self.userstat(client, message, issuer, ["issuedbyid"])
+		await self.userstat(client, message, issuer)
 	
 	async def mylevel(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -972,7 +975,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 			await commander.execCommand(command, client, message, user)
 			return True
 	
-	out = ["Insufficient rights. You are: {}".format(user["level"])]
+	out = ["Insufficient rights. You are: __{}__".format(user["level"])]
 	if "pseudoProfile" in user:
 		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet!")
 	await message.reply("\n".join(out), disable_web_page_preview=True, parse_mode="md")

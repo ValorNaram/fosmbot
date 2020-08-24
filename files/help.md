@@ -16,7 +16,7 @@
 `/demoteme`
   - Demote yourself to a user (level __user__). You loose your federation rights.
   - at least level __fedadmin__ required. Users with level __owner__ cannot execute that command
-`/mystat`
+`/mydata`
   - Returns data about yourself
 `/mylevel`
   - Returns your access level
@@ -73,6 +73,8 @@
   - Returns data about a known user (from all levels)
   - at least level __fedadmin__ required
   - all chats
+`/mystat`
+  - Same as `/userstat` but returns data about the user who issued that command
 `/removerecord <username or id>`
   - Removes the record of a particular user
   - level __owner__ required

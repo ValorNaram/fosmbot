@@ -39,6 +39,7 @@ LEVEL_FEDADMIN:
   - funban
   - fbanlist
   - userstat
+  - mystat
   - changecomment
   - viewgroups
   - search
@@ -50,7 +51,6 @@ LEVEL_USER:
 
 LEVEL_BANNED:
   - mylevel
-  - mystat
   - groupid
   - myid
   - mydata
