@@ -25,9 +25,7 @@ def readOwner(): # belongs to fosmbot's core
 def addUser(userid, username, displayname):
 	dbhelper.sendToPostgres(config["adduser"], (str(userid), str(username).lower(), displayname, commander.createTimestamp()))
 
-def createExpireTime(creationTime): # belongs to fosmbot's core
-	expireAt = config["DATABASE_ENTRY_EXPIRE_MONTH"]
-		
+def createExpireTime(creationTime, expireAt): # belongs to fosmbot's core
 	if int(creationTime[1]) == 12:
 		creationTime[0] = int(creationTime[0])+1
 		creationTime[1] = 0
@@ -41,24 +39,25 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	def __init__(self):
 		threading.Thread.__init__(self)
 	
-	def isExpired(self, creationTime):
+	def isExpired(self, creationTime, expireAt):
 		creationTime = str(creationTime)
 		creationTime = creationTime.split(" ")[0].split("-")
 		
-		targettime_float = createExpireTime(creationTime)
+		targettime_float = createExpireTime(creationTime, expireAt)
 		
 		if time.time() > targettime_float: # database entry expired
 			return True
 		return False
 	
-	def docleanup(self):
+	def docleanup(self, level, expiration):
 		with dbhelper.conn:
 			with dbhelper.conn.cursor() as cursor:
 				if exitFlag == 1:
+					logging.info("Cleaning up database interrupted, closing transaction...")
 					cursor.close()
 					return False
 				logging.info("Performing a database clean up...")
-				cursor.execute(config["dbcleanupbyts"], ("user",))
+				cursor.execute(config["dbcleanupbyts"], (level,))
 				
 				if not cursor.description == None:
 					columns = []
@@ -74,20 +73,23 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 								logging.info("Cleaning up database interrupted, closing transaction...")
 								cursor.close()
 								return False
-							if self.isExpired(output[user]["ts"]):
+							if self.isExpired(output[user]["ts"], expiration):
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
 		
 		logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 	
 	def run(self):
 		while exitFlag == 0:
-			for i in range(0, 60*60*int(config["DATABASE_CLEANUP_HOUR"])):
+			for i in range(0, 60*int(config["DATABASE_CLEANUP_HOUR"])):
 				if exitFlag == 1:
 					logging.info("Database cleanup schedule canceled!")
 					return False
 				time.sleep(1)
 			
-			self.docleanup()
+			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
+				level, expiration = rule.split(",")
+				self.docleanup(level.strip(), int(expiration.strip()))
+		
 		logging.info("Database cleanup stopped!")
 	
 class commandControl():
@@ -731,18 +733,18 @@ class commandControl():
 		command = message.command
 		
 		if not limitedmode:
-			if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+			if "reply_to_message" in dir(message) and message.reply_to_message is not None and not issuer["id"] == str(message.from_user.id):
 				newcommand = [str(message.reply_to_message.from_user.id)]
 				for i in command:
 					newcommand.append(i)
 				command = newcommand
-			if "forward_from" in dir(message) and message.forward_from is not None:
+			if "forward_from" in dir(message) and message.forward_from is not None and not issuer["id"] == str(message.from_user.id):
 				newcommand = [str(message.forward_from.id)]
 				for i in command:
 					newcommand.append(i)
 				command = newcommand
 		if len(command) == 0:
-			await self.__reply(message, "Syntax `/userstat <username or id>` not used.")
+			await self.__reply(message, "Syntax `/userstat <username or id>` not used. If you wanted to see your stat, then execute `/mystat`.")
 			return True
 		
 		userinput = command[0].lower()
@@ -781,6 +783,9 @@ class commandControl():
 		await self.__reply(message, "\n".join(output))
 	
 	async def mystat(self, client, message, issuer):
+		if not message.chat.type == "private":
+			return False
+		
 		message.command = [str(message.from_user.id)]
 		await self.userstat(client, message, issuer)
 	
@@ -1005,10 +1010,8 @@ async def userleaves(client, message):
 	if message.chat.type == "channel":
 		return False
 	
-	if not str(message.chat.id) in user["groups"]:
-		return False
-	
-	dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
+	if str(message.chat.id) in user["groups"]:
+		dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core

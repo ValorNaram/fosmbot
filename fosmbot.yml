@@ -4,7 +4,9 @@ DATABASE_USER: fosmbot
 DATABASE_USER_PASSWD: mypasswd
 DATABASE_DBNAME: fosm
 DATABASE_CLEANUP_HOUR: 24
-DATABASE_ENTRY_EXPIRE_MONTH: 2
+DATABASE_USERRECORD_EXPIRE_MONTH: # - <level of user to apply the rule on>,<expiration in months (integer values)>
+  - user,2
+  - banned,12
 
 logchannel: -1001206244890
 daystoban: 365
