@@ -829,6 +829,7 @@ def main(): # belongs to fosmbot's core
 	global config, dbhelper, commander, allcommands, app
 	
 	config = {}
+	logging.basicConfig(format='%(message)s', level=logging.INFO)
 	app = pyrogram.Client("fosm")
 	
 	logging.info("loading 'fosmbot.yml' configuration...")

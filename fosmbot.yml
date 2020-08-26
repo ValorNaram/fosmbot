@@ -10,6 +10,7 @@ DATABASE_USERRECORD_EXPIRE_MONTH: # - <level of user to apply the rule on>,<expi
 
 logchannel: -1001206244890
 daystoban: 365
+logsignature: no
 
 immunity:
   - owner
