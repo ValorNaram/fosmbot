@@ -829,13 +829,15 @@ def main(): # belongs to fosmbot's core
 	global config, dbhelper, commander, allcommands, app
 	
 	config = {}
-	logging.basicConfig(format='[fosmbot]: %(asctime)s %(message)s', level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S %p")
 	app = pyrogram.Client("fosm")
 	
 	logging.info("loading 'fosmbot.yml' configuration...")
 	sfile = open("fosmbot.yml", "r")
 	config = yaml.safe_load(sfile)
 	sfile.close()
+	
+	if "logsignature" in config and config["logsignature"] == "yes":
+		logging.basicConfig(format='[fosmbot]: %(asctime)s %(message)s', level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S %p")
 	
 	logging.info("loading available commands...")
 	for level in config["LEVELS"]:
@@ -1004,6 +1006,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message):
 	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
+	logging.info("User leaves: {}".format(message.from_user.id))
 	if len(user) == 0:
 		return False
 	
@@ -1011,6 +1014,7 @@ async def userleaves(client, message):
 		return False
 	
 	if str(message.chat.id) in user["groups"]:
+		logging.info("User leaves: db entry gets removed")
 		dbhelper.sendToPostgres(config["removegroupfromuser"].format(message.chat.id, user["id"])) #necessary because psycopg2 adds a trailing whitespace to negative integers causing this SQL not to work
 
 @app.on_message()
