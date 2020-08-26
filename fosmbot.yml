@@ -65,6 +65,7 @@ LEVEL_BANNED:
   - groupauthorized
   - userid
 
+getall: select id from users;
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');
 getuser: select * from users where id=%s;
 getuserbyusername: select * from users where username=%s LIMIT 1;

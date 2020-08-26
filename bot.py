@@ -50,6 +50,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 		return False
 	
 	def docleanup(self, level, expiration):
+		removed = 0
 		with dbhelper.conn:
 			with dbhelper.conn.cursor() as cursor:
 				if exitFlag == 1:
@@ -74,18 +75,28 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 								cursor.close()
 								return False
 							if self.isExpired(output[user]["ts"], expiration):
+								logging.info("removing orphaned user data...")
+								removed += 1
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
-		
+		total = dbhelper.getResult(config["getall"], ())
+		totalrecords = total.cur.rowcount
+		total.cancel()
+		try:
+			app.send_message(config["botowner"], "- {} user records removed\n- still containing {} user records".format(removed, totalrecords))
+		except:
+			pass
 		logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 	
 	def run(self):
+		hours = 1
 		while exitFlag == 0:
-			for i in range(0, 60*int(config["DATABASE_CLEANUP_HOUR"])):
+			for i in range(0, 60*60*hours):
 				if exitFlag == 1:
 					logging.info("Database cleanup schedule canceled!")
 					return False
 				time.sleep(1)
 			
+			hours = int(config["DATABASE_CLEANUP_HOUR"])
 			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
 				level, expiration = rule.split(",")
 				self.docleanup(level.strip(), int(expiration.strip()))
@@ -374,10 +385,11 @@ class commandControl():
 		targetuser = dbhelper.getResult(config["getuser"], (str(message.from_user.id),)).get()
 		if not len(targetuser) == 0:
 			message.command = [str(message.from_user.id)]
-			await self.userstat(client, message, user, ["issuedbyid"], limitedmode=True)
+			await self.userstat(client, message, targetuser, ["issuedbyid"], limitedmode=True)
 			await self.__reply(message, "The most critical data is your telegram id and telegram username. One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet (the 'comment' field does not contain anything). If you want to have this data removed, then message [this person](tg://user?id={}) and then we will look into it if having your data removed would not have a negative effect on our responsibility to keep unwanted users away from our groups.".format(config["botowner"]))
 		else:
-			await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
+			await self.__reply(message, "We have no data about you!")
+			#await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
 	
 	async def privacypolicy(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -407,24 +419,22 @@ class commandControl():
 			await self.__replySilence(message, "Syntax: `/changecomment <username or id> <comment>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
-		targetuserInQuestion = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+		userinput = command[0].lower()
+		command[0] = command[0].replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
-				await self.__userNotFound(message, targetuserInQuestion)
+				await self.__userNotFound(message, userinput)
 				return False
-			targetuserInQuestion = command[0].replace("@", "")
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
-		targetuserInQuestion_id = command[0]
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 		
-		del command[0]
-		
-		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):# or targetuserInQuestion_id in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
 		
-		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), targetuserInQuestion_id))
+		del command[0]
+		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), targetuser["id"]))
+		
 		await self.__reply(message, "Comment about [{0[displayname]}](tg://user?id={0[id]}) changed".format(targetuser))
 	
 	async def testme(self, client, message, issuer):
@@ -1005,9 +1015,8 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		await banUserIfnecessary(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
-async def userleaves(client, message):
+async def userleaves(client, message): # Does not work, gets not dispatched
 	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
-	logging.info("User leaves: {}".format(message.from_user.id))
 	if len(user) == 0:
 		return False
 	
