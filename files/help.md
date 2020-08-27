@@ -12,6 +12,9 @@
 `/privacypolicy`
   - Returns a notice about how we collect data.
 
+username substitution
+  - means, just reply a message written by a user you want to touch with that command
+
 **Me -  private chat only commands**
 `/demoteme`
   - Demote yourself to a user (level __user__). You loose your federation rights.
@@ -45,18 +48,17 @@
 `/changecomment <username or id> <comment>`
   - Changes the comment about a user we have in our database
   - at least level __fedadmin__ required
-  - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
+  - __username substitution__ possible
 `/changelevel <username or id> <level>`
   - Set the user's level to `<level>`
   - at least __superadmin__ required
-  - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
+  - __username substitution__ possible
 `/search <display name>`
   - Prints out all users (telegram id inclusive) this Bot knows and having the specified display name
   - at least level __fedadmin__ required
   - private chat only
 `/userid`
   - Prints the id of the user of the replied to message and or the id from the original sender in case the replied to is a forwarded one.
-  - at least level __fedadmin__ required
 `/owners`
   - Returns a list of users being owners (ideally only one because the current implementation does not allow having multiple owners)
   - at least level __user__ required
@@ -78,7 +80,6 @@
 `/removerecord <username or id>`
   - Removes the record of a particular user
   - level __owner__ required
-  - **not possible:** to substitute `<username or id>`
   - private chat only
 `/addrecord <username or id> <user id>`
   - Same as `/removerecord` but let's the owner create a user record by hand
@@ -90,18 +91,21 @@
 `/funban <username or id>`
   - Unban a previously banned user
   - at least level __fedadmin__ required
-  - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
+  - __username substitution__ possible
 `/fban <username or id> <comment>`
   - Ban a user with a reason (=comment)
   - at least level __fedadmin__ required
-  - to substitute `<username or id>`, just reply a message written by a user you want to unban with that command
+  - __username substitution__ possible
 `/newowner <username or id>`
   - Transfer Ownership to another user. The previous owner gets demoted to the level __user__
   - level __owner__ required
-  - **not possible** to substitute `<username or id>`
 `/fbanlist`
   - Returns a csv document containing all banned users.
   - at least level __fedadmin__
+
+**Miscs**
+`/stats`
+  - View stats about the bots' database cleanup efforts
 
 
 It's all FOSS --> https://github.com/valornaram/fosmbot

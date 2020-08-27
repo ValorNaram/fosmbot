@@ -64,6 +64,7 @@ LEVEL_BANNED:
   - testme
   - groupauthorized
   - userid
+  - stats
 
 getall: select id from users;
 adduser: insert into users values (%s,%s,%s,'user','',NULL,%s, '{}');

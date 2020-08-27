@@ -10,6 +10,7 @@ dbhelper = None # belongs to fosmbot's core
 commander = None # belongs to fosmbot's core
 allcommands = [] # belongs to fosmbot's core
 app = None # belongs to fosmbot's core
+stats = {"dbcleanup": {"totalrecords": 0, "removed": 0}}
 
 def changeOwnerInFile(ownerid): # belongs to fosmbot's core
 	sfile = open("botowner.txt", "w")
@@ -56,7 +57,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 				if exitFlag == 1:
 					logging.info("Cleaning up database interrupted, closing transaction...")
 					cursor.close()
-					return False
+					return 0, 0
 				logging.info("Performing a database clean up...")
 				cursor.execute(config["dbcleanupbyts"], (level,))
 				
@@ -64,42 +65,47 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 					columns = []
 					for col in cursor.description:
 						columns.append(col.name)
-					result = [0]
+					output = [0]
 					
-					while len(result) > 0:
-						result = cursor.fetchmany(20)
-						output = dbhelper.toJSON(result, columns, cursor)
+					while len(output) > 0:
+						output = dbhelper.toJSON(cursor.fetchmany(20), columns, cursor)
 						for user in output:
 							if exitFlag == 1:
 								logging.info("Cleaning up database interrupted, closing transaction...")
 								cursor.close()
-								return False
+								return 0, 0
 							if self.isExpired(output[user]["ts"], expiration):
 								logging.info("removing orphaned user data...")
 								removed += 1
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
+		
 		total = dbhelper.getResult(config["getall"], ())
 		totalrecords = total.cur.rowcount
 		total.cancel()
-		try:
-			app.send_message(config["botowner"], "- {} user records removed\n- still containing {} user records".format(removed, totalrecords))
-		except:
-			pass
-		logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
+		return removed, totalrecords
 	
 	def run(self):
-		hours = 1
+		hours = 10*1
+		removed = 0
+		total = 0
 		while exitFlag == 0:
-			for i in range(0, 60*60*hours):
+			for i in range(0, hours):
 				if exitFlag == 1:
 					logging.info("Database cleanup schedule canceled!")
 					return False
 				time.sleep(1)
 			
-			hours = int(config["DATABASE_CLEANUP_HOUR"])
+			hours = 60*60*int(config["DATABASE_CLEANUP_HOUR"])
 			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
 				level, expiration = rule.split(",")
-				self.docleanup(level.strip(), int(expiration.strip()))
+				r, t = self.docleanup(level.strip(), int(expiration.strip()))
+				removed += r
+				total += t
+			
+			stats["dbcleanup"]["removed"] = removed
+			stats["dbcleanup"]["totalrecords"] = total
+			
+			logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 		
 		logging.info("Database cleanup stopped!")
 	
@@ -291,6 +297,15 @@ class commandControl():
 	
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
+	
+	async def stats(self, client, message, issuer):
+		if not message.chat.type == "private":
+			return False
+		
+		try:
+			await app.send_message(config["botowner"], "- {0[removed]} user records removed\n- still containing {0[totalrecords]} user records\n. Values since the last clean up and before the next one.".format(stats["dbcleanup"]))
+		except:
+			pass
 	
 	async def userid(self, client, message, issuer):
 		out = []
@@ -705,6 +720,7 @@ class commandControl():
 		if issuer["level"] == "banned":
 			message.command = [str(message.from_user.id)]
 			await self.userstat(client, message, issuer, ["issuedbyid"], limitedmode=True)
+			await self.__reply("You can complain about your ban by inquire in @osmadmininquiries")
 		else:
 			await self.__reply(message, "You are not a __banned__ one!")
 	
