@@ -100,7 +100,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 				level, expiration = rule.split(",")
 				r, t = self.docleanup(level.strip(), int(expiration.strip()))
 				removed += r
-				total += t
+				total = t
 			
 			stats["dbcleanup"]["removed"] = removed
 			stats["dbcleanup"]["totalrecords"] = total
