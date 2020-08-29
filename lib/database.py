@@ -57,10 +57,15 @@ class Record():
 		self.cur.close()
 	
 	def get(self):
+		result = {}
+		
 		try:
-			return self.__next__()
+			result = self.__next__()
 		except StopIteration:
-			return {}
+			pass
+		
+		self.cancel()
+		return result
 
 class helper(): # thread safe
 	def __init__(self, conf):

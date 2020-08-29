@@ -58,9 +58,8 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 					logging.info("Cleaning up database interrupted, closing transaction...")
 					cursor.close()
 					return 0, 0
-				logging.info("Performing a database clean up...")
-				cursor.execute(config["dbcleanupbyts"], (level,))
 				
+				cursor.execute(config["dbcleanupbyts"], (level,))
 				if not cursor.description == None:
 					columns = []
 					for col in cursor.description:
@@ -95,6 +94,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 					return False
 				time.sleep(1)
 			
+			logging.info("Performing a database clean up...")
 			hours = 60*60*int(config["DATABASE_CLEANUP_HOUR"])
 			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
 				level, expiration = rule.split(",")
@@ -303,7 +303,7 @@ class commandControl():
 			return False
 		
 		try:
-			await app.send_message(config["botowner"], "- {0[removed]} user records removed\n- still containing {0[totalrecords]} user records\n. Values since the last clean up and before the next one.".format(stats["dbcleanup"]))
+			await app.send_message(config["botowner"], "- {0[removed]} user records removed\n- still {0[totalrecords]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\n Values since the last clean up and before the next one.".format(stats["dbcleanup"]))
 		except:
 			pass
 	
@@ -1032,7 +1032,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message): # Does not work, gets not dispatched
-	user = dbhelper.sendToPostgres(config["getuser"], (str(message.left_chat_member.id),))
+	user = dbhelper.getResult(config["getuser"], (str(user.id),), limit=1).get()
 	if len(user) == 0:
 		return False
 	
