@@ -10,7 +10,7 @@ dbhelper = None # belongs to fosmbot's core
 commander = None # belongs to fosmbot's core
 allcommands = [] # belongs to fosmbot's core
 app = None # belongs to fosmbot's core
-stats = {"dbcleanup": {"totalrecords": 0, "removed": 0}}
+appdata = {"dbcleanup": {"totalrecords": 0, "removed": 0, "timestamp": ""}}
 
 def changeOwnerInFile(ownerid): # belongs to fosmbot's core
 	sfile = open("botowner.txt", "w")
@@ -52,6 +52,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	
 	def docleanup(self, level, expiration):
 		removed = 0
+		total = 0
 		with dbhelper.conn:
 			with dbhelper.conn.cursor() as cursor:
 				if exitFlag == 1:
@@ -60,6 +61,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 					return 0, 0
 				
 				cursor.execute(config["dbcleanupbyts"], (level,))
+				total = cursor.rowcount
 				if not cursor.description == None:
 					columns = []
 					for col in cursor.description:
@@ -78,10 +80,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 								removed += 1
 								dbhelper.sendToPostgres(config["removeuser"], (output[user]["id"],))
 		
-		total = dbhelper.getResult(config["getall"], ())
-		totalrecords = total.cur.rowcount
-		total.cancel()
-		return removed, totalrecords
+		return removed, total
 	
 	def run(self):
 		hours = 10*1
@@ -100,10 +99,11 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 				level, expiration = rule.split(",")
 				r, t = self.docleanup(level.strip(), int(expiration.strip()))
 				removed += r
-				total = t
+				total += t
 			
-			stats["dbcleanup"]["removed"] = removed
-			stats["dbcleanup"]["totalrecords"] = total
+			appdata["dbcleanup"]["removed"] = removed
+			appdata["dbcleanup"]["towatch"] = total
+			appdata["dbcleanup"]["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
 			
 			logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 		
@@ -302,8 +302,19 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
+		total = dbhelper.getResult(config["getall"], ())
+		totalrecords = total.cur.rowcount
+		total.cancel()
+		
+		tz = ""
+		if time.localtime().tm_isdst > 0:
+			# daylight time (DST)
+			tz = time.tzname[1]
+		else:
+			tz = time.tzname[0]
+		
 		try:
-			await app.send_message(config["botowner"], "- {0[removed]} user records removed\n- still {0[totalrecords]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\n Values since the last clean up and before the next one.".format(stats["dbcleanup"]))
+			await app.send_message(config["botowner"], "\n- {1[removed]} user records removed\n- {1[towatch]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\nThe database contains **{total}** user records in total. Last update: {1[timestamp]} {tzone}".format(total=totalrecords, appdata["dbcleanup"], tzone=tz))
 		except:
 			pass
 	
