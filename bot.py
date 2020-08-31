@@ -770,13 +770,13 @@ class commandControl():
 		command = message.command
 		
 		if not limitedmode:
-			if "reply_to_message" in dir(message) and message.reply_to_message is not None and not issuer["id"] == str(message.from_user.id):
-				newcommand = [str(message.reply_to_message.from_user.id)]
+			if "forward_from" in dir(message) and message.forward_from is not None:
+				newcommand = [str(message.forward_from.id)]
 				for i in command:
 					newcommand.append(i)
 				command = newcommand
-			if "forward_from" in dir(message) and message.forward_from is not None and not issuer["id"] == str(message.from_user.id):
-				newcommand = [str(message.forward_from.id)]
+			elif "reply_to_message" in dir(message) and message.reply_to_message is not None and not issuer["id"] == str(message.from_user.id):
+				newcommand = [str(message.reply_to_message.from_user.id)]
 				for i in command:
 					newcommand.append(i)
 				command = newcommand
