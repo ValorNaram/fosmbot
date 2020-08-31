@@ -314,7 +314,7 @@ class commandControl():
 			tz = time.tzname[0]
 		
 		try:
-			await app.send_message(config["botowner"], "\n- {1[removed]} user records removed\n- {1[towatch]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\nThe database contains **{0}** user records in total. Last update: {1[timestamp]} {2}".format(totalrecords, appdata["dbcleanup"], tz))
+			await app.send_message(config["botowner"], "\n- {1[removed]} user records removed\n- {1[towatch]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\nThe database contains **{0}** user records in total.\n\nLast update: {1[timestamp]} {2}".format(totalrecords, appdata["dbcleanup"], tz))
 		except:
 			pass
 	
@@ -1043,7 +1043,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 
 @app.on_message(pyrogram.Filters.left_chat_member)
 async def userleaves(client, message): # Does not work, gets not dispatched
-	user = dbhelper.getResult(config["getuser"], (str(user.id),), limit=1).get()
+	user = dbhelper.getResult(config["getuser"], (str(message.from_user.id),), limit=1).get()
 	if len(user) == 0:
 		return False
 	
