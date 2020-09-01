@@ -298,6 +298,20 @@ class commandControl():
 	def createTimestamp(self): # belongs to fosmbot's core
 		return time.strftime("%Y-%m-%d")
 	
+	def noncmd_resolveUsername(self, username):
+		targetuser = {}
+		userinput = username.lower()
+		username = username.replace("@", "")
+		
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (username,)).get()
+			if len(targetuser) == 0:
+				return targetuser
+		if len(targetuser) == 0:
+			targetuser = dbhelper.getResult(config["getuser"], (username,)).get()
+		
+		return targetuser
+	
 	async def stats(self, client, message, issuer):
 		if not message.chat.type == "private":
 			return False
@@ -354,23 +368,13 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		targetuser = {}
 		command = message.command
-		
-		targetuserInQuestion = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, targetuserInQuestion)
-				return False
-			targetuserInQuestion = command[0].replace("@", "")
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
+			await self.__userNotFound(message, command[0])
+			return False
 		
-		targetuserInQuestion_id = command[0]
-		del command[0]
-		
-		dbhelper.sendToPostgres(config["removeuser"], (targetuserInQuestion_id,))
+		dbhelper.sendToPostgres(config["removeuser"], (targetuser["id"],))
 		await self.__reply(message, "**Removed user** [{0[displayname]}](tg://user?id={0[id]}) from the known users list. To verify that you can execute `/userstat {0[id]}` in this chat.".format(targetuser))
 	
 	async def addrecord(self, client, message, issuer):
@@ -445,15 +449,10 @@ class commandControl():
 			await self.__replySilence(message, "Syntax: `/changecomment <username or id> <comment>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
-		userinput = command[0].lower()
-		command[0] = command[0].replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, userinput)
-				return False
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
+			await self.__userNotFound(message, command[0])
+			return False
 		
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
@@ -489,21 +488,16 @@ class commandControl():
 			self.__replySilence(message, "You cannot use that command to promote a user to a higher level or even to your level")
 			return False # user does not have the right to promote <user> to <level>
 		
-		userinput = command[0].lower()
-		command[0] = command[0].replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, userinput)
-				return False
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
+			await self.__userNotFound(message, command[0])
+			return False
 		
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			self.__replySilence(message, "You cannot use that command to promote a user with a higher level or even equal to yours")
 			return False
 		
-		dbhelper.sendToPostgres(config["changelevel"], (command[1], command[0]))
+		dbhelper.sendToPostgres(config["changelevel"], (command[1], targetuser["id"]))
 		await self.__logGroup(message, "User [{0[displayname]}](tg://user?id={0[id]}) is now a `{1}` one as requested by [{2[displayname]}](tg://user?id={2[id]}) with level `{2[level]}`".format(targetuser, command[1], issuer))
 	
 	async def demoteme(self, client, message, issuer): # belongs to fosmbot's core
@@ -530,23 +524,18 @@ class commandControl():
 			await self.__reply(message, "Syntax: `/funban <username or id>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
 			return False
 		
-		userinput = command[0].lower()
-		command[0] = userinput.replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, userinput)
-				return False
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
-		
-		if not targetuser["level"] == "banned":
-			await self.__replySilence(message, "User [{}](tg://user?id={}) hasn't been banned or they are immun against bans".format(userinput, command[0]))
+			await self.__userNotFound(message, command[0])
 			return False
 		
-		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", command[0]))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), command[0]))
-		dbhelper.sendToPostgres(config["changelevel"], ("user", command[0]))
+		if not targetuser["level"] == "banned":
+			await self.__replySilence(message, "User [{0[displayname]}](tg://user?id={0[id]}) hasn't been banned or they are immun against bans".format(targetuser))
+			return False
+		
+		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", targetuser["id"]))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), targetuser["id"]))
+		dbhelper.sendToPostgres(config["changelevel"], ("user", targetuser["id"]))
 		
 		await self.__performUnban(message, issuer, targetuser)
 	
@@ -566,17 +555,12 @@ class commandControl():
 		if not len(command) > 1:
 			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
 		
-		userinput = command[0].lower()
-		command[0] = userinput.replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				addUser(command[0], command[0], "Anonymous User {}".format(userinput))
-				targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(userinput))
-		
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
-		toban = command[0]
+			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
+			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
+		
+		toban = targetuser["id"]
 		del command[0]
 		
 		if len(targetuser) == 0:
@@ -615,34 +599,24 @@ class commandControl():
 		if not issuer["level_int"] == 0:
 			return False
 		
-		userinput = command[0].lower()
-		command[0] = userinput.replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
-				await self.__userNotFound(message, userinput)
-				return False
-			
-			try:
-				int(command[0])
-			except:
-				await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it: Couldn't convert username to telegram id")
-				return False
-		command[0] = int(command[0])
-		
+		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()#dbhelper.sendToPostgres(config["getuser"], (command[0],))
-		
-		if not len(targetuser) == 0:
-			await self.__userNotFound(message, userinput)
+			await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it:")
+			await self.__userNotFound(message, command[0])
 			return False
+			
+		try:
+			int(targetuser["id"])
+		except:
+			await self.__reply(message, "Command to transfer Ownership of 'osmallgroups' federation issued but couldn't execute it: Couldn't convert username to telegram id")
+			return False
+		newowner = int(targetuser["id"])
 		
 		dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
-		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], command[0]))
+		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], newowner))
 		
-		changeOwnerInFile(command[0])
-		config["botowner"] = command[0]
+		changeOwnerInFile(newowner)
+		config["botowner"] = newowner
 		config["botownerrecord"] = targetuser
 		
 		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?id={0[id]}) to [{0[displayname]}](tg://user?id={0[id]}). The new ownership will be ensured by a file on the server".format(issuer, targetuser))
@@ -776,20 +750,13 @@ class commandControl():
 			await self.__reply(message, "Syntax `/userstat <username or id>` not used. If you wanted to see your stat, then execute `/mystat`.")
 			return True
 		
-		userinput = command[0].lower()
-		command[0] = userinput.replace("@", "")
-		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, userinput)
-				return False
+		targetuser = self.noncmd_resolveUsername(command[0])
+		if len(targetuser) == 0:
+			await self.__userNotFound(message, command[0])
+			return False
+		
 		if command[0] in issuer["id"]:
 			targetuser = issuer
-		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
-			if len(targetuser) == 0:
-				await self.__userNotFound(message, userinput)
-				return False
 		
 		output = ["[{0[displayname]}](tg://user?id={0[id]}):".format(targetuser)]
 		columntrans = {"id": "Telegram id", "username": "Username", "displayname": "Name", "level": "Access level", "comment": "Comment", "issuedbyid": "Comment by", "ts": "Record created at", "pseudoProfile": "Profile won't be saved", "groups": "In groups", "level_int": "Numerical access level"}
@@ -822,7 +789,7 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		await self.__reply(message, "You are {}".format(issuer["level"]))
+		await self.__reply(message, "You are __{}__".format(issuer["level"]))
 	
 	async def groupid(self, client, message, issuer): # belongs to fosmbot's core
 		if "chat" in dir(message) and message.chat is not None:
