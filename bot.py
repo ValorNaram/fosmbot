@@ -489,19 +489,17 @@ class commandControl():
 			self.__replySilence(message, "You cannot use that command to promote a user to a higher level or even to your level")
 			return False # user does not have the right to promote <user> to <level>
 		
-		command[0] = str(command[0])
-		userToPromote = command[0]
-		if command[0].startswith("@"): # if true, then resolve username to telegram id (if applicable)
-			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0].replace("@", ""),)).get()
-			#command[0], targetuser = dbhelper.resolveUsername(command[0])
+		userinput = command[0].lower()
+		command[0] = command[0].replace("@", "")
+		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
+			targetuser = dbhelper.getResult(config["getuserbyusername"], (command[0],)).get()
 			if len(targetuser) == 0:
-				await self.__userNotFound(message, userToPromote)
+				await self.__userNotFound(message, userinput)
 				return False
-			command[0] = command[0].replace("@", "")
 		if len(targetuser) == 0:
-			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get() #dbhelper.sendToPostgres(config["getuser"], (command[0],))
+			targetuser = dbhelper.getResult(config["getuser"], (command[0],)).get()
 		
-		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):# or command[0] in config["botownerrecord"]:
+		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			self.__replySilence(message, "You cannot use that command to promote a user with a higher level or even equal to yours")
 			return False
 		
