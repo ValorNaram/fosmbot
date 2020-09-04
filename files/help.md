@@ -45,10 +45,6 @@ username substitution
   - Returns if a group is authorized. If it does not return anything, then the bot isn't active in the group you typed that command in.
 
 **Users**
-`/changecomment <username or id> <comment>`
-  - Changes the comment about a user we have in our database
-  - at least level __fedadmin__ required
-  - __username substitution__ possible
 `/changelevel <username or id> <level>`
   - Set the user's level to `<level>`
   - at least __superadmin__ required

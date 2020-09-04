@@ -1,4 +1,4 @@
-**OSM Federation Bot - Privacy Policy**
+**OSM Federation bot - Privacy Policy**
 
 `/help`
   - view the help text (not this one)
@@ -6,24 +6,24 @@
   - view this text
 
 **Definitions**
-Bot
-  - a program you can chat with (in Telegram) which executes a pre-defined set of commands as the user wants. A bot usually automates some things and helps human to concentrate on other buisness.
+bot
+  - a program you can chat with (in Telegram) which executes a pre-defined set of commands as the user wants. A bot usually automates some things and helps to concentrate on other buisness.
 Our group(s)
   - The ones prefixed/suffixed with "OSM" or "OpenStreetMap", "HOT" and "Humanitarian OpenStreetMap" in their name. But exceptions exists.
 We
-  - The OpenStreetMap Community developing and utilizing the Bot
+  - The OpenStreetMap Community developing and utilizing the bot
 Interactions (with our groups):
   - Interactions are joins, sending messages, leaves and sending media. In this case you are a member of one or more of our groups.
 Authorized groups:
-  - Groups which are allowed to use that Bot. A group having the Bot does not necessary mean that that group is an authorized one. To check if a group is authorized, just issue `/authorizegroup` in a group the Bot is in.
+  - Groups which are allowed to use that bot. A group having the bot does not necessary mean that that group is an authorized one. To check if a group is authorized, just issue `/authorizegroup` in a group the bot is in.
 in private
   - chat with this bot or more general "a chat with a single account/bot"
 
 
 **General**
-Bot owner: @valornaram
+bot owner: @valornaram
 
-This Bot exists to keep spammers away from our groups. For that the bot collects some data about each member in our group:
+This bot exists to keep spammers away from our groups. For that the bot collects some data about each member in our group:
   - Your telegram internal id
   - Your username
   - Your first- & last name
@@ -33,7 +33,7 @@ This Bot exists to keep spammers away from our groups. For that the bot collects
   - a list of groups you and the bot are in
   - Timestamp (When was your record added to the database)
 
-To view the data the Bot has saved about you, just issue `/mydata` in a private chat with the bot.
+To view the data the bot has saved about you, just issue `/mydata` in a private chat with the bot.
 
 **When will this data be collected?**
 The bot creates a record in our database (see "General" section) if you join one of our groups. If you chat with the bot in private and aren't in any of our groups, then the bot won't save anything about you but creates as pseudo profile which is deleted immediately after command execution.

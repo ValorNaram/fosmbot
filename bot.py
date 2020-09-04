@@ -127,28 +127,27 @@ class commandControl():
 		
 		Parameters:
 		  - `message` _object_: message object as returned by Pyrogram (https://docs.pyrogram.org/api/types/Message?highlight=message).
-		  - `userInQuestion` _string_: the telegram id of the user which the issuer wants to touch.
-		  - `issuer_level` _int_: the level of the user which executes this command (issuer).
+		  - `issuer_level_int` _int_: the level of the user which executes this command (issuer).
 		  - `targetuser` _dict_: the record the bot has about the user which the issuer wants to touch.
-		Checks, if the user which executes the command ('issuer_level') has the right to touch the user (to change the record of them) (`userInQuestion`, `targetuser`)
+		Checks, if the user which executes the command ('issuer_level_int') has the right to touch the user (to change the record of them) (`targetuser`)
 		
 		Returns:
 		  Boolean indicating if the issuer can touch the user in question or not
 		
 		Example:
-		You have the telegram id `5678` and level `1`
+		You have the level `1`
 		The user from which you want to change the record has the telegram id `1234` and the level `2`
 		    
-		    self.__canTouchUser(message, 1234, , {1234: {"id": 1234, "username": "foobar", "displayname": "Foo Bar", "level": "fedadmin", "comment": "", "issuedbyid": None, "groups": {}, "ts": "2020-12-01 00:00:00"}})
+		    self.__canTouchUser(message, 1234, 1, {1234: {"id": 1234, "username": "foobar", "displayname": "Foo Bar", "level": "fedadmin", "comment": "", "issuedbyid": None, "groups": {}, "ts": "2020-12-01 00:00:00"}})
 		
 		Returns:
 		  True
 		
 		Answer:
-		  It returns `True` which means that the issuer can touch the user (`userInQuestion`, `targetuser`)
+		  It returns `True` which means that the issuer can touch the user (`targetuser`)
 		"""
-		userInQuestion_level_int = config["LEVELS"].index(targetuser["level"])
-		if userInQuestion_level_int > issuer_level_int: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
+		targetuser_level_int = config["LEVELS"].index(targetuser["level"])
+		if targetuser_level_int > issuer_level_int: # if true, then the user (issuer_level) who issued that command has rights to touch user in question (userInQuestion)
 			return True
 		await self.__replySilence(message, "You don't have the necessary rights to touch the user!")
 		return False
@@ -863,14 +862,18 @@ def main(): # belongs to fosmbot's core
 	commander = commandControl()
 	
 	logging.info("downloading list of groups...")
-	group = True
 	config["groupslist"] = {}
+	for group in dbhelper.getResult(config["getgroups"], (), limit=1):
+		if group is not None:
+			config["groupslist"][group[0]] = group[1]
+	
+	"""group = True
 	cur = dbhelper.getCursor(config["getgroups"])
 	while group is not None:
 		group = dbhelper.getOneRow(cur)
 		if group is not None:
 			for groupid in group:
-				config["groupslist"][groupid] = group[groupid]
+				config["groupslist"][groupid] = group[groupid]"""
 
 if __name__ == "__main__":
 	main()
@@ -1001,7 +1004,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		await banUserIfnecessary(message, user)
 
 @app.on_message(pyrogram.Filters.left_chat_member)
-async def userleaves(client, message): # Does not work, gets not dispatched
+async def userleaves(client, message): # sometimes it gets dispatched
 	user = dbhelper.getResult(config["getuser"], (str(message.from_user.id),), limit=1).get()
 	if len(user) == 0:
 		return False
