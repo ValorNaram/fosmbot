@@ -568,15 +568,20 @@ class commandControl():
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
 		
-		if targetuser["level"] == "banned":
-			message.command = [toban, " ".join(command)]
-			
-			await self.changecomment(client, message, issuer)
-			return False
-		
 		toban_level = targetuser["level"]
 		if "immunity" in config and toban_level in config["immunity"]:# or toban in config["botownerrecord"]: # bug here but another security system prevents from unattended owner overwrite so it is not dramatic to deactivate this here
 			await self.__userisimmun(targetuser);
+			return False
+		
+		if targetuser["level"] == "banned":
+			#message.command = [toban, " ".join(command)]
+			
+			#await self.changecomment(client, message, issuer)
+			if int(message.chat.id) in config["groupslist"]:
+				await app.kick_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
+				self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
+			else:
+				self.groupauthorized(client, message, issuer)
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
@@ -865,7 +870,7 @@ def main(): # belongs to fosmbot's core
 	config["groupslist"] = {}
 	for group in dbhelper.getResult(config["getgroups"], (), limit=1):
 		if group is not None:
-			config["groupslist"][group[0]] = group[1]
+			config["groupslist"][group["id"]] = group
 	
 	"""group = True
 	cur = dbhelper.getCursor(config["getgroups"])
@@ -874,6 +879,7 @@ def main(): # belongs to fosmbot's core
 		if group is not None:
 			for groupid in group:
 				config["groupslist"][groupid] = group[groupid]"""
+	logging.info(config["groupslist"])
 
 if __name__ == "__main__":
 	main()
@@ -933,7 +939,7 @@ def addToGroup(message, user):
 async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
 		try:
-			await app.kick_chat_member(message.chat.id, user["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+			await app.kick_chat_member(message.chat.id, int(user["id"]), int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 		except (pyrogram.errors.ChatAdminRequired):
 			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
@@ -998,7 +1004,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		if len(user) == 0:
 			continue
 		
-		if message.chat.type == "channel" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
+		if message.chat.type == "channel" or not message.chat.id == config["groupslist"]:
 			continue
 		
 		await banUserIfnecessary(message, user)
@@ -1034,7 +1040,7 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	if "reply_to_message" in dir(message) and message.reply_to_message is not None:
 		addUserToDatabase(message.chat.type, message.reply_to_message.from_user)
 	
-	if message.chat.type == "channel" or message.chat.type == "private" or not dbhelper.isAuthorizedGroup(message.chat.id, config["groupslist"]):
+	if message.chat.type == "channel" or message.chat.type == "private" or not message.chat.id == config["groupslist"]:
 		return False
 	
 	await banUserIfnecessary(message, user)
