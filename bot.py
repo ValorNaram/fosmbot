@@ -327,7 +327,7 @@ class commandControl():
 			tz = time.tzname[0]
 		
 		try:
-			self.__reply(message, "\n- {1[removed]} user records removed\n- {1[towatch]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\nThe database contains **{0}** user records in total.\n\nLast update: {1[timestamp]} {2}".format(totalrecords, appdata["dbcleanup"], tz))
+			await self.__reply(message, "\n- {1[removed]} user records removed\n- {1[towatch]} user records the cleanup code is responsible for and need to check regulary for orphaned ones.\nThe database contains **{0}** user records in total.\n\nLast update: {1[timestamp]} {2}".format(totalrecords, appdata["dbcleanup"], tz))
 		except:
 			pass
 	
