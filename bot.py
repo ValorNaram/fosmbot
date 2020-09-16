@@ -574,14 +574,14 @@ class commandControl():
 			return False
 		
 		if targetuser["level"] == "banned":
-			#message.command = [toban, " ".join(command)]
-			
-			#await self.changecomment(client, message, issuer)
-			if int(message.chat.id) in config["groupslist"]:
+			logging.info("reached target 'banned'")
+			if message.chat.id in config["groupslist"]:
 				await app.kick_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
 				self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
 			else:
-				self.groupauthorized(client, message, issuer)
+				message.command = [toban, " ".join(command)]
+				await self.changecomment(client, message, issuer)
+			
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
@@ -634,7 +634,7 @@ class commandControl():
 			username = self.noncmd_getChatUsername(message)
 			dbhelper.sendToPostgres(config["authorizegroup"], (message.chat.id, username))
 			config["groupslist"][message.chat.id] = {"id": message.chat.id, "username": username}
-			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups'".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Added group [{}](tg://group?id={}). Now it belongs to the federation 'osmallgroups' and user records will be created whenever a user interacts with that group.\nIssue `/mystat` in private chat with @fosmbot .\nIssue `/privacypolicy` in private chat for a privacy notice and `/help` also in private chat for documentation".format(message.chat.title, message.chat.id))
 	
 	async def removegroup(self, client, message, issuer): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
@@ -644,7 +644,7 @@ class commandControl():
 		if len(out) > 0:
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
 			del config["groupslist"][message.chat.id]
-			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group.".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group. User records won't be created anylonger when a user interacts with that group.".format(message.chat.title, message.chat.id))
 	
 	async def search(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -887,6 +887,7 @@ if __name__ == "__main__":
 def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if user is None:
 		return {}
+	chattype = chat.type
 	displayname = commander.noncmd_getDisplayname(user)
 	canReturn = False
 	userexists = False
@@ -907,7 +908,10 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			userexists = True
 			dbhelper.sendToPostgres(config["updateuserid"], (str(user.id), user.username.lower()))
 	
-	if not userexists and not chat == "private" and not chat == "channel" or not userexists and user.id == config["botowner"]:
+	if not chat.id in config["groupslist"]:
+		canReturn = False
+	
+	if not userexists and not chattype == "private" and not chattype == "channel" and chat.id in config["groupslist"] or not userexists and user.id == config["botowner"]:
 		addUser(user.id, user.username, displayname)
 	elif userexists:
 		dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
@@ -926,7 +930,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 			logging.info("Ensuring Ownership of user '{}' ({}) as {}".format(displayname, user.id, config["LEVELS"][0]))
 	else:
 		out["level_int"] = config["LEVELS"].index(out["level"])
-	if chat == "private" and not userexists or chat == "channel" and not userexists:
+	if chattype == "private" and not userexists or chattype == "channel" and not userexists:
 		out["pseudoProfile"] = True
 	
 	return out
@@ -946,13 +950,13 @@ async def banUserIfnecessary(message, user):
 		except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 			commander.removegroup(None, message, None, None, None)
 		except:
-			pass
+			logging.error("User with id '{}' couldn't be kicked from '{}'".format(user["id"], message.chat.id))
 	
 	addToGroup(message, user)
 
 @app.on_message(pyrogram.Filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
-	user = addUserToDatabase(message.chat.type, message.from_user)
+	user = addUserToDatabase(message.chat, message.from_user)
 	if len(user) == 0:
 		return False
 	
@@ -1000,11 +1004,11 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		newmembers = [newmembers]
 	
 	for member in newmembers:
-		user = addUserToDatabase(message.chat.type, member)
+		user = addUserToDatabase(message.chat, member)
 		if len(user) == 0:
 			continue
 		
-		if message.chat.type == "channel" or not message.chat.id == config["groupslist"]:
+		if message.chat.type == "channel" or not message.chat.id in config["groupslist"]:
 			continue
 		
 		await banUserIfnecessary(message, user)
@@ -1024,7 +1028,7 @@ async def userleaves(client, message): # sometimes it gets dispatched
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
-	user = addUserToDatabase(message.chat.type, message.from_user)
+	user = addUserToDatabase(message.chat, message.from_user)
 	
 	if len(user) == 0:
 		return False
@@ -1034,13 +1038,16 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	
 	if "forward_from" in dir(message) and message.forward_from is not None:
 		if not "pseudoProfile" in user:
-			message.chat.type = "group"
-		addUserToDatabase(message.chat.type, message.forward_from)
+			message.chat.type = "group" # @fosmbot must think that it is an authorized group from which the message came because otherwise it won't be possible for fedadmins and higher to preventive fban known spammers because @fosmbot wouldn't create a record of these spammers
+			for i in config["groupslist"]:
+				message.chat.id = i
+				break
+		addUserToDatabase(message.chat, message.forward_from)
 		
 	if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-		addUserToDatabase(message.chat.type, message.reply_to_message.from_user)
+		addUserToDatabase(message.chat, message.reply_to_message.from_user)
 	
-	if message.chat.type == "channel" or message.chat.type == "private" or not message.chat.id == config["groupslist"]:
+	if message.chat.type == "channel" or message.chat.type == "private" or not message.chat.id in config["groupslist"]:
 		return False
 	
 	await banUserIfnecessary(message, user)
