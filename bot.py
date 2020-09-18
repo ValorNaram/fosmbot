@@ -240,7 +240,7 @@ class commandControl():
 			if not int(group) in config["groupslist"]:
 				continue
 			try:
-				app.unban_chat_member(int(group), targetuser["id"])
+				await app.unban_chat_member(int(group), targetuser["id"])
 			except (pyrogram.errors.ChatAdminRequired):
 				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuser))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
