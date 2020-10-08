@@ -4,7 +4,7 @@ from lib import dbsetup # belongs to fosmbot's core
 import logging, yaml, pyrogram, time, os, threading # belongs to fosmbot's core
 
 exitFlag = 0 # belongs to fosmbot's core
-threads = [] # belongs to fosmbot's core
+threads = {} # belongs to fosmbot's core
 config = {} # belongs to fosmbot's core
 dbhelper = None # belongs to fosmbot's core
 commander = None # belongs to fosmbot's core
@@ -108,15 +108,20 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 			logging.info("Database clean up performed. Repeat in '{0[DATABASE_CLEANUP_HOUR]:.0f}' hour(s)".format(config))
 		
 		logging.info("Database cleanup stopped!")
+		del thread[self]
 	
 class commandControl():
-	def telegramidorusername(self, userid):
+	def telegramidorusername(self, userid, form=False):
 		userid = str(userid).replace("@", "")
+		out = ""
 		try:
-			userid = str(int(userid))
-			return userid # is telegram id
+			out = str(int(userid)) # is telegram id
+			if form:
+				out = "`" + out + "`"
 		except:
-			return "@" + userid # is telegram username
+			out = "@" + userid.lower() # is telegram username
+		
+		return out
 	
 	def noncmd_createtempuserrecord(self, userid, username, displayname):
 		userid = str(userid)
@@ -229,7 +234,7 @@ class commandControl():
 			except:
 				pass
 			
-		target = self.telegramidorusername(targetuser["id"])
+		target = self.telegramidorusername(targetuser["id"], True)
 		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuser, target))
 	
 	async def __performUnban(self, message, issuer, targetuser):
@@ -300,7 +305,7 @@ class commandControl():
 	def noncmd_resolveUsername(self, username):
 		targetuser = {}
 		userinput = username.lower()
-		username = username.replace("@", "")
+		username = userinput.replace("@", "")
 		
 		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
 			targetuser = dbhelper.getResult(config["getuserbyusername"], (username,)).get()
@@ -576,6 +581,7 @@ class commandControl():
 		if targetuser["level"] == "banned":
 			logging.info("reached target 'banned'")
 			if message.chat.id in config["groupslist"]:
+				logging.info("local banned")
 				await app.kick_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
 				self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
 			else:
@@ -1056,7 +1062,7 @@ if __name__ == "__main__":
 	logging.info("Scheduling database cleanup...")
 	clean = dbcleanup()
 	clean.start()
-	threads.append(clean)
+	threads[clean] = True
 	
 	logging.info("starting fosmbot...")
 	app.run()
