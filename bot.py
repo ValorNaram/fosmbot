@@ -84,9 +84,10 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 	
 	def run(self):
 		hours = 10*1
-		removed = 0
-		total = 0
+		
 		while exitFlag == 0:
+			removed = 0
+			total = 0
 			for i in range(0, hours):
 				if exitFlag == 1:
 					logging.info("Database cleanup schedule canceled!")
@@ -94,7 +95,7 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 				time.sleep(1)
 			
 			logging.info("Performing a database clean up...")
-			hours = 60*60*int(config["DATABASE_CLEANUP_HOUR"])
+			hours = 60*int(config["DATABASE_CLEANUP_HOUR"])
 			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
 				level, expiration = rule.split(",")
 				r, t = self.docleanup(level.strip(), int(expiration.strip()))
