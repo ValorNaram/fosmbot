@@ -24,7 +24,7 @@ def readOwner(): # belongs to fosmbot's core
 	return filebuffer.replace("\n", "")
 
 def addUser(userid, username, displayname):
-	dbhelper.sendToPostgres(config["adduser"], (str(userid), str(username).lower(), displayname, commander.createTimestamp()))
+	dbhelper.sendToPostgres(config["adduser"], (str(userid).lower(), str(username).lower(), displayname, commander.createTimestamp()))
 
 def createExpireTime(creationTime, expireAt): # belongs to fosmbot's core
 	if int(creationTime[1]) == 12:
@@ -55,11 +55,6 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 		total = 0
 		with dbhelper.conn:
 			with dbhelper.conn.cursor() as cursor:
-				if exitFlag == 1:
-					logging.info("Cleaning up database interrupted, closing transaction...")
-					cursor.close()
-					return 0, 0
-				
 				cursor.execute(config["dbcleanupbyts"], (level,))
 				total = cursor.rowcount
 				if not cursor.description == None:
@@ -236,7 +231,7 @@ class commandControl():
 				pass
 			
 		target = self.telegramidorusername(targetuser["id"], True)
-		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`".format(issuer, targetuser, target))
+		await self.__logGroup(message, "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) ( {2} ) from federation 'osmallgroups' for 365 days.\n**Reason:** `{1[comment]}`\n**Security & Integrity:** {3}".format(issuer, targetuser, target, message.security))
 	
 	async def __performUnban(self, message, issuer, targetuser):
 		targetuser["id"] = self.telegramidorusername(targetuser["id"])
@@ -547,23 +542,32 @@ class commandControl():
 	async def fban(self, client, message, issuer):
 		targetuser = {}
 		command = message.command
+		message.security = "unknown"
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			newcommand = [str(message.reply_to_message.from_user.id)]
+			message.security = "secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
 		
+		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
+			message.security = "secure because banned the original author of the forwarded message you sent (using telegram id)"
+			command = [str(message.reply_to_message.forward_from.id)]
+		
 		if len(command) == 0:
-			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
+			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question.")
 			return False
 		if not len(command) > 1:
-			command.append("not acting like a person with interest into OpenStreetMap or GIS or even into the community of OpenStreetMap itself")
+			command.append("not acting like a person with interest into OpenStreetMap nor GIS nor even into the community of OpenStreetMap itself.")
 		
 		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
+			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent (not using telegram ids)"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
+		else:
+			message.security = "partially (in)secure. Only full secure if you used their telegram id (numerical value) for banning that user. Resolved username/id: `{}`".format(targetuser["id"])
 		
 		toban = targetuser["id"]
 		del command[0]
