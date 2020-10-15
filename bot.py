@@ -569,7 +569,7 @@ class commandControl():
 		try:
 			int(targetuser["id"])
 		except:
-			message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id".format(targetuser["id"])
+			message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id.".format(targetuser["id"])
 		
 		toban = targetuser["id"]
 		del command[0]
