@@ -992,13 +992,6 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 				if not objid == 0 and objid in config["groupspecified"][command[0]]:
 					await commander.execCommand(command, client, message, user)
 					return True
-				"""elif command[0].startswith("can_"):
-					if await commander.noncmd_userHasLocalChatPermission(message, user, command[0]):
-						await commander.execCommand(command, client, message, user)
-						return True
-					else:
-						await message.reply("Command not available to you. You need the '{}' for this group.", parse_mode="md")
-					return False"""
 				else:
 					await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
 					return False
