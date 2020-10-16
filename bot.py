@@ -223,8 +223,8 @@ class commandControl():
 				continue
 			try:
 				await app.kick_chat_member(int(group), targetuser["id"], int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-			except (pyrogram.errors.ChatAdminRequired):
-				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuser))
+			except (pyrogram.errors.UserAdminInvalid):
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **banned** user [{1[displayname]}](tg://user?id={1[id]}) (`{1[id]}`) from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(issuer, targetuser))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 				commander.removegroup(None, message, None, None, None)
 			except:
@@ -242,8 +242,8 @@ class commandControl():
 				continue
 			try:
 				await app.unban_chat_member(int(group), targetuser["id"])
-			except (pyrogram.errors.ChatAdminRequired):
-				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuser))
+			except (pyrogram.errors.UserAdminInvalid):
+				await app.send_message(int(group), "[{0[displayname]}](tg://user?id={0[id]}) **unbanned** user [{1[displayname]}](tg://user?id={1[id]}) (`{1[id]}`) from federation 'osmallgroups'. However that user couldn't be unbanned from this group. **Do I have the right to unban them here?**".format(issuer, targetuser))
 			except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 				commander.removegroup(None, message, None, None, None)
 			except:
@@ -566,10 +566,12 @@ class commandControl():
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent (not using telegram ids)"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
-		try:
-			int(targetuser["id"])
-		except:
-			message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id.".format(targetuser["id"])
+		
+		if not message.security == "unknown":
+			try:
+				int(targetuser["id"])
+			except:
+				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id.".format(targetuser["id"])
 		
 		toban = targetuser["id"]
 		del command[0]
@@ -657,7 +659,7 @@ class commandControl():
 		if len(out) > 0:
 			dbhelper.sendToPostgres(config["deauthorizegroup"], (message.chat.id,))
 			del config["groupslist"][message.chat.id]
-			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group. User records won't be created anylonger when a user interacts with that group.".format(message.chat.title, message.chat.id))
+			await self.__logGroup(message, "Removed group [{}](tg://group?id={}). It does not longer belong to the federation 'osmallgroups'. Past fbans won't be recovered for that group. User records won't be created any longer when a user interacts with that group.".format(message.chat.title, message.chat.id))
 	
 	async def search(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -720,7 +722,7 @@ class commandControl():
 		if issuer["level"] == "banned":
 			message.command = [str(message.from_user.id)]
 			await self.userstat(client, message, issuer, ["issuedbyid"], limitedmode=True)
-			await self.__reply("You can complain about your ban by inquire in @osmadmininquiries")
+			await self.__reply("You can complain about your ban in @osmadmininquiries or alternatively by contacting @valornaram")
 		else:
 			await self.__reply(message, "You are not a __banned__ one!")
 	
@@ -957,8 +959,8 @@ async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
 		try:
 			await app.kick_chat_member(message.chat.id, int(user["id"]), int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
-		except (pyrogram.errors.ChatAdminRequired):
-			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
+		except (pyrogram.errors.UserAdminInvalid):
+			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) (`{0[id]}`) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
 		except (pyrogram.errors.ChatWritePermission, pyrogram.errors.ChannelPrivate):
 			commander.removegroup(None, message, None, None, None)
@@ -986,21 +988,20 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 			else:
 				objid = str(message.from_user.id)
 			
-			if "groupspecified" in config:
-				if command[0] in config["groupspecified"]:
-					if not objid == 0 and objid in config["groupspecified"][command[0]]:
+			if "groupspecified" in config and command[0] in config["groupspecified"]:
+				if not objid == 0 and objid in config["groupspecified"][command[0]]:
+					await commander.execCommand(command, client, message, user)
+					return True
+				"""elif command[0].startswith("can_"):
+					if await commander.noncmd_userHasLocalChatPermission(message, user, command[0]):
 						await commander.execCommand(command, client, message, user)
 						return True
-					elif command[0].startswith("can_"):
-						if await commander.noncmd_userHasLocalChatPermission(message, user, command[0]):
-							await commander.execCommand(command, client, message, user)
-							return True
-						else:
-							await message.reply("Command not available to you. You need the '{}' for this group.", parse_mode="md")
-						return False
 					else:
-						await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
-						return False
+						await message.reply("Command not available to you. You need the '{}' for this group.", parse_mode="md")
+					return False"""
+				else:
+					await message.reply("Command not available to you. It is either just executable in a specified group or just available for a specified user.", parse_mode="md")
+					return False
 			
 			await commander.execCommand(command, client, message, user)
 			return True
@@ -1008,7 +1009,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 	out = ["Insufficient rights. You are: __{}__".format(user["level"])]
 	if "pseudoProfile" in user:
 		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet!")
-	await message.reply("\n".join(out), disable_web_page_preview=True, parse_mode="md")
+	await message.reply("\n".join(out), parse_mode="md")
 
 @app.on_message(pyrogram.Filters.new_chat_members)
 async def userjoins(client, message): # belongs to fosmbot's core
