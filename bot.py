@@ -567,11 +567,11 @@ class commandControl():
 			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent (not using telegram ids)"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
 		
-		if not message.security == "unknown":
+		if message.security == "unknown":
 			try:
 				int(targetuser["id"])
 			except:
-				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id.".format(targetuser["id"])
+				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id."
 		
 		toban = targetuser["id"]
 		del command[0]
