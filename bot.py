@@ -544,16 +544,18 @@ class commandControl():
 		command = message.command
 		message.security = "unknown"
 		
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
+			newcommand = [str(message.reply_to_message.forward_from.id)]
+			message.security = "secure because banned the original author of the forwarded message you sent (using telegram id)"
+			for i in command:
+				newcommand.append(i)
+			command = newcommand
+		elif "reply_to_message" in dir(message) and message.reply_to_message is not None and c:
 			newcommand = [str(message.reply_to_message.from_user.id)]
 			message.security = "secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-		
-		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
-			message.security = "secure because banned the original author of the forwarded message you sent (using telegram id)"
-			command = [str(message.reply_to_message.forward_from.id)]
 		
 		if len(command) == 0:
 			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question.")
@@ -564,14 +566,15 @@ class commandControl():
 		targetuser = self.noncmd_resolveUsername(command[0])
 		if len(targetuser) == 0:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
-			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent (not using telegram ids)"
+			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
 		
 		if message.security == "unknown":
 			try:
 				int(targetuser["id"])
+				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id. Prefer to use telegram ids instead!"
 			except:
-				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id."
+				message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 		
 		toban = targetuser["id"]
 		del command[0]
