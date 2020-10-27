@@ -550,7 +550,7 @@ class commandControl():
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-		elif "reply_to_message" in dir(message) and message.reply_to_message is not None and c:
+		elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			newcommand = [str(message.reply_to_message.from_user.id)]
 			message.security = "secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
