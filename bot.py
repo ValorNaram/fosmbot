@@ -563,11 +563,6 @@ class commandControl():
 		if not len(command) > 1:
 			command.append("not acting like a person with interest into OpenStreetMap nor GIS nor even into the community of OpenStreetMap itself.")
 		
-		try:
-			int(command[0])
-		except:
-			message.security = 
-		
 		targetuser = self.noncmd_resolveUsername(command[0])
 		
 		if len(targetuser) > 0 and command[0] == targetuser["id"] and not message.security == "unknown":
