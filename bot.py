@@ -546,13 +546,13 @@ class commandControl():
 		
 		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
 			newcommand = [str(message.reply_to_message.forward_from.id)]
-			message.security = "secure because banned the original author of the forwarded message you sent (using telegram id)"
+			message.security = "highly secure because banned the original author of the forwarded message you sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
 		elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			newcommand = [str(message.reply_to_message.from_user.id)]
-			message.security = "secure because replied to a message the spammer sent (using telegram id)"
+			message.security = "highly secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -563,18 +563,22 @@ class commandControl():
 		if not len(command) > 1:
 			command.append("not acting like a person with interest into OpenStreetMap nor GIS nor even into the community of OpenStreetMap itself.")
 		
+		try:
+			int(command[0])
+		except:
+			message.security = 
+		
 		targetuser = self.noncmd_resolveUsername(command[0])
+		
+		if len(targetuser) > 0 and command[0] == targetuser["id"] and not message.security == "unknown":
+			message.security = "highly secure because banned user using their telegram id where no resolvement of username was involved"
+		else if len(targetuser) > 0 and not message.security == "unknown":
+			message.security = "(un)secure, @fosmbot could resolve the username to a telegram id but please prefer banning by telegram id instead! Only secure if {0} (`{1}`) points to the same user as [{2[displayname]}](tg://user?id={2[id]})".format(command[0], command[0], targetuser)
+		
 		if len(targetuser) == 0:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
-		
-		if message.security == "unknown":
-			try:
-				int(targetuser["id"])
-				message.security = "partially (in)secure because @fosmbot had to resolve the username to the telegram id. Prefer to use telegram ids instead!"
-			except:
-				message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 		
 		toban = targetuser["id"]
 		del command[0]
@@ -641,7 +645,7 @@ class commandControl():
 		config["botowner"] = newowner
 		config["botownerrecord"] = targetuser
 		
-		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?id={0[id]}) to [{0[displayname]}](tg://user?id={0[id]}). The new ownership will be ensured by a file on the server".format(issuer, targetuser))
+		await self.__logGroup(message, "Ownership changed from [{0[displayname]}](tg://user?id={0[id]}) to [{1[displayname]}](tg://user?id={1[id]}). The new ownership will be ensured by a file on the server".format(issuer, targetuser))
 	
 	async def addgroup(self, client, message, issuer): # belongs to fosmbot's core
 		if message.chat.type == "private" or message.chat.type == "channel":
