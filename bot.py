@@ -567,7 +567,7 @@ class commandControl():
 		
 		if len(targetuser) > 0 and command[0] == targetuser["id"] and not message.security == "unknown":
 			message.security = "highly secure because banned user using their telegram id where no resolvement of username was involved"
-		elif len(targetuser) > 0 and not message.security == "unknown":
+		elif len(targetuser) > 0 and message.security == "unknown":
 			message.security = "(un)secure, @fosmbot could resolve the username to a telegram id but please prefer banning by telegram id instead! Only secure if {0} (`{1}`) points to the same user as [{2[displayname]}](tg://user?id={2[id]})".format(command[0], command[0], targetuser)
 		
 		if len(targetuser) == 0:
