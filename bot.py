@@ -389,6 +389,9 @@ class commandControl():
 		elif len(command) == 1:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
+		elif "reply_to_message" in dir(message) and not message.reply_to_message is not None:
+			user = addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) #experimental change
+			await self.__replySilence(message, "Record for user `[{0[displayname]}](tg://user?id={0[id]})` created".format(user))
 	
 	async def help(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -474,6 +477,7 @@ class commandControl():
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
+			addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) # experimental change
 		
 		if not len(command) == 2:
 			await self.__replySilence(message, "Syntax: `/changelevel <username or id> <level>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
@@ -542,6 +546,7 @@ class commandControl():
 	async def fban(self, client, message, issuer):
 		targetuser = {}
 		command = message.command
+		autoref = None # experimental change
 		message.security = "unknown"
 		
 		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
@@ -550,12 +555,14 @@ class commandControl():
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
+			autoref = message.reply_to_message.forward_from # experimental change
 		elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
 			newcommand = [str(message.reply_to_message.from_user.id)]
 			message.security = "highly secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
+			autoref = message.reply_to_message.from_user # experimental change
 		
 		if len(command) == 0:
 			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question.")
@@ -570,7 +577,9 @@ class commandControl():
 		elif len(targetuser) > 0 and message.security == "unknown":
 			message.security = "(un)secure, @fosmbot could resolve the username to a telegram id but please prefer banning by telegram id instead! Only secure if {0} (`{1}`) points to the same user as [{2[displayname]}](tg://user?id={2[id]})".format(command[0], command[0], targetuser)
 		
-		if len(targetuser) == 0:
+		if len(targetuser) == 0 and autoref == None: # experimental change
+			addUserToDatabase(message.chat, autoref, add=True) # experimental change
+		elif len(targetuser) == 0:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
@@ -901,7 +910,7 @@ def main(): # belongs to fosmbot's core
 if __name__ == "__main__":
 	main()
 
-def addUserToDatabase(chat, user): # belongs to fosmbot's core
+def addUserToDatabase(chat, user, add=False): # belongs to fosmbot's core
 	if user is None:
 		return {}
 	chattype = chat.type
@@ -915,7 +924,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if user.username is None:
 		user.username = str(user.id)
 	
-	if user.is_self or user.is_deleted or user.is_bot or user.is_support:
+	if user.is_self or user.is_deleted:# or user.is_bot or user.is_support:
 		return {}
 	
 	if not userexists:
@@ -928,7 +937,7 @@ def addUserToDatabase(chat, user): # belongs to fosmbot's core
 	if not chat.id in config["groupslist"]:
 		canReturn = False
 	
-	if not userexists and not chattype == "private" and not chattype == "channel" and chat.id in config["groupslist"] or not userexists and user.id == config["botowner"]:
+	if not userexists and not chattype == "private" and not chattype == "channel" and chat.id in config["groupslist"] and add or not userexists and user.id == config["botowner"]:
 		addUser(user.id, user.username, displayname)
 	elif userexists:
 		dbhelper.sendToPostgres(config["updateuserinfo"], (user.username.lower(), displayname, str(user.id)))
@@ -973,7 +982,7 @@ async def banUserIfnecessary(message, user):
 
 @app.on_message(pyrogram.Filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
-	user = addUserToDatabase(message.chat, message.from_user)
+	user = addUserToDatabase(message.chat, message.from_user, add=True) # experimental change: add=True
 	if len(user) == 0:
 		return False
 	
@@ -1013,7 +1022,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		newmembers = [newmembers]
 	
 	for member in newmembers:
-		user = addUserToDatabase(message.chat, member)
+		user = addUserToDatabase(message.chat, member, add=True) # experimental change: add=True
 		if len(user) == 0:
 			continue
 		
