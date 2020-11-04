@@ -577,18 +577,18 @@ class commandControl():
 		elif len(targetuser) > 0 and message.security == "unknown":
 			message.security = "(un)secure, @fosmbot could resolve the username to a telegram id but please prefer banning by telegram id instead! Only secure if {0} (`{1}`) points to the same user as [{2[displayname]}](tg://user?id={2[id]})".format(command[0], command[0], targetuser)
 		
-		if len(targetuser) == 0 and autoref == None: # experimental change
-			addUserToDatabase(message.chat, autoref, add=True) # experimental change
+		if len(targetuser) == 0 and not autoref == None: # experimental change
+			targetuser = addUserToDatabase(message.chat, autoref, add=True) # experimental change
 		elif len(targetuser) == 0:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			message.security = "highly unsecure, avoid issueing bans using usernames because they can be changed. The fban could also apply to an innocent. Prefer to use telegram ids instead! @fosmbot cannot guarantee that in future the right user will be banned!"
 			targetuser = self.noncmd_createtempuserrecord(command[0], command[0], "Anonymous User {}".format(command[0]))
 		
+		if len(targetuser) == 0:
+			targetuser = self.noncmd_createAnonymousRecord(command[0])
+		
 		toban = targetuser["id"]
 		del command[0]
-		
-		if len(targetuser) == 0:
-			targetuser = self.noncmd_createAnonymousRecord(toban)
 		
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
 			return False
