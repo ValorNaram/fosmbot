@@ -443,7 +443,7 @@ class commandControl():
 			await self.__reply(message, "**No Privacy Policy available**")
 	
 	async def changecomment(self, client, message, issuer):
-		targetuser = {}config["groups"]
+		targetuser = {}
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
