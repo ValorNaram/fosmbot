@@ -218,6 +218,10 @@ class commandControl():
 		targetuser["id"] = self.telegramidorusername(targetuser["id"])
 		targetuser["username"] = self.telegramidorusername(targetuser["username"])
 		
+		if message.chat.id in config["groupslist"]:
+			targetuser["groups"][message.chat.id] = self.noncmd_getChatUsername(message)
+			addToGroup(message, targetuser)
+		
 		for group in targetuser["groups"]:
 			if not int(group) in config["groupslist"]:
 				continue
@@ -439,7 +443,7 @@ class commandControl():
 			await self.__reply(message, "**No Privacy Policy available**")
 	
 	async def changecomment(self, client, message, issuer):
-		targetuser = {}
+		targetuser = {}config["groups"]
 		command = message.command
 		
 		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
