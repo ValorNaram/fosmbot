@@ -46,6 +46,7 @@ LEVEL_FEDADMIN:
   - changecomment
   - viewgroups
   - search
+  - match
 
 LEVEL_USER:
   - fedadmins
