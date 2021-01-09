@@ -716,7 +716,7 @@ class commandControl():
 			await self.__reply(message, "Syntax: `/match <display name>`")
 			return False
 		
-		output = dbhelper.sendToPostgres(config["getusersbydisplayname2"], (" ".join(command)))
+		output = dbhelper.sendToPostgres(config["getuserbydisplayname2"], (" ".join(command)))
 		
 		users = []
 		for user in output:
