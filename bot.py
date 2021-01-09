@@ -78,19 +78,19 @@ class dbcleanup(threading.Thread): # belongs to fosmbot's core
 		return removed, total
 	
 	def run(self):
-		hours = 10*1
+		seconds = 10*1
 		
 		while exitFlag == 0:
 			removed = 0
 			total = 0
-			for i in range(0, hours):
+			for i in range(0, seconds):
 				if exitFlag == 1:
 					logging.info("Database cleanup schedule canceled!")
 					return False
 				time.sleep(1)
 			
 			logging.info("Performing a database clean up...")
-			hours = 60*int(config["DATABASE_CLEANUP_HOUR"])
+			seconds = 60*60*int(config["DATABASE_CLEANUP_HOUR"])
 			for rule in config["DATABASE_USERRECORD_EXPIRE_MONTH"]:
 				level, expiration = rule.split(",")
 				r, t = self.docleanup(level.strip(), int(expiration.strip()))
@@ -706,7 +706,30 @@ class commandControl():
 			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), {0[username]} (`{0[id]}`)".format(user))
 		
 		await self.__reply(message, "\n".join(output))
+	
+	async def match(self, client, message, issuer):
+		if not message.chat.type == "private":
+			return False
 		
+		command = message.command
+		if len(command) == 0:
+			await self.__reply(message, "Syntax: `/match <display name>`")
+			return False
+		
+		output = dbhelper.sendToPostgres(config["getusersbydisplayname2"], (" ".join(command)))
+		
+		users = []
+		for user in output:
+			users.append(output[user])
+		
+		output = ["Case-Insensitive search results for users having the name '{}':".format(" ".join(command))]
+		for user in users:
+			user["id"] = self.telegramidorusername(user["id"])
+			user["username"] = self.telegramidorusername(user["username"])
+			output.append("- [{0[displayname]}](tg://user?id={0[id]}) (**level:** {0[level]}), {0[username]} (`{0[id]}`)".format(user))
+		
+		await self.__reply(message, "\n".join(output))
+	
 	async def __returnusers(self, message, level):
 		if not message.chat.type == "private":
 			return False
