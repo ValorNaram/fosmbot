@@ -304,7 +304,7 @@ class commandControl():
 	
 	def noncmd_resolveUsername(self, username):
 		targetuser = {}
-		userinput = username.lower()
+		userinput = self.telegramidorusername(username.lower())
 		username = userinput.replace("@", "")
 		
 		if userinput.startswith("@"): # if true, then resolve username to telegram id (if applicable)
