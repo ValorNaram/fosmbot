@@ -7,4 +7,4 @@ RUN pip install pyyaml
 RUN pip install psycopg2
 
 COPY . .
-CMD ["python", "test.py"]
+CMD ["python", "bot.py"]

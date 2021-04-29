@@ -11,8 +11,10 @@ services:
     image: postgres
     restart: always
     environment:
+      POSTGRES_USER: fosmbot
+      POSTGRES_DB: fosm
       POSTGRES_PASSWORD: mypasswd
       PGDATA: /var/lib/postgresql/data/pgdata
     
     volumes:
-      - ./app/db:/var/lib/postgresql/data/pgdata
+      - ./app/db:/var/lib/postgresql/data
