@@ -1013,7 +1013,7 @@ async def banUserIfnecessary(message, user):
 	
 	addToGroup(message, user)
 
-@app.on_message(pyrogram.Filters.command(allcommands))
+@app.on_message(pyrogram.filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
 	user = addUserToDatabase(message.chat, message.from_user, add=True) # experimental change: add=True
 	if len(user) == 0:
@@ -1048,7 +1048,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 		out.append("This Bot does not have any data about you stored. It will generate a pseudo profile everytime you chat with it because it is not necessary to create a profile for you yet!")
 	await message.reply("\n".join(out), parse_mode="md")
 
-@app.on_message(pyrogram.Filters.new_chat_members)
+@app.on_message(pyrogram.filters.new_chat_members)
 async def userjoins(client, message): # belongs to fosmbot's core
 	newmembers = message.new_chat_members
 	if type(newmembers) is not list:
@@ -1064,7 +1064,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 		
 		await banUserIfnecessary(message, user)
 
-@app.on_message(pyrogram.Filters.left_chat_member)
+@app.on_message(pyrogram.filters.left_chat_member)
 async def userleaves(client, message): # sometimes it gets dispatched
 	user = dbhelper.getResult(config["getuser"], (str(message.from_user.id),), limit=1).get()
 	if len(user) == 0:
