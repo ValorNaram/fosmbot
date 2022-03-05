@@ -493,7 +493,7 @@ class commandControl():
 			await self.__replySilence(message, "Level `{}` does not exist!".format(command[1]))
 		
 		if not levelToPromoteTo_int > issuer["level_int"]: # if true, then the user who issued that command has no rights to promote <user> to <level>
-			self.__replySilence(message, "You cannot use that command to promote a user to a higher level or even to your level")
+			await self.__replySilence(message, "You cannot use that command to promote a user to a higher level or even to your level")
 			return False # user does not have the right to promote <user> to <level>
 		
 		targetuser = self.noncmd_resolveUsername(command[0])
@@ -502,7 +502,7 @@ class commandControl():
 			return False
 		
 		if not await self.__canTouchUser(message, issuer["level_int"], targetuser):
-			self.__replySilence(message, "You cannot use that command to promote a user with a higher level or even equal to yours")
+			await self.__replySilence(message, "You cannot use that command to promote a user with a higher level or even equal to yours")
 			return False
 		
 		dbhelper.sendToPostgres(config["changelevel"], (command[1], targetuser["id"]))
@@ -613,7 +613,7 @@ class commandControl():
 		if targetuser["level"] == "banned":
 			if message.chat.id in config["groupslist"]:
 				await app.ban_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
-				self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
+				await self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
 			else:
 				message.command = [toban, " ".join(command)]
 				await self.changecomment(client, message, issuer)
