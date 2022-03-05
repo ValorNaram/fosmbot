@@ -612,7 +612,7 @@ class commandControl():
 		
 		if targetuser["level"] == "banned":
 			if message.chat.id in config["groupslist"]:
-				await app.kick_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
+				await app.ban_chat_member(message.chat.id, int(toban), int(time.time() + 60*60*24*int(config["daystoban"])))
 				self.__replySilence(message, "[{0[displayname]}](tg://user?=[{0[id]}]) has been **banned** from this group".format(targetuser))
 			else:
 				message.command = [toban, " ".join(command)]
@@ -1002,7 +1002,7 @@ def addToGroup(message, user):
 async def banUserIfnecessary(message, user):
 	if user["level"] == "banned" and not message.chat.type == "channel":
 		try:
-			await app.kick_chat_member(message.chat.id, int(user["id"]), int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
+			await app.ban_chat_member(message.chat.id, int(user["id"]), int(time.time() + 60*60*24*int(config["daystoban"]))) # kick chat member and automatically unban after ... days
 		except (pyrogram.errors.UserAdminInvalid):
 			await app.send_message(group, "User [{0[displayname]}](tg://user?id={0[id]}) (`{0[id]}`) has been banned from federation 'osmallgroups'. However that user couldn't be banned from this group. **Do I have the right to ban them here?**".format(user))
 			return False
