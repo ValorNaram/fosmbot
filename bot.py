@@ -339,10 +339,10 @@ class commandControl():
 	async def userid(self, client, message, issuer):
 		out = []
 		forwarded = False
-		message = message.reply_to_message
+		message = message.reply_to
 		
-		if "forward_from" in dir(message) and message.forward_from is not None:
-			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.forward_from), message.forward_from.id, message.forward_from.id))
+		if "fwd_from" in dir(message) and message.fwd_from is not None:
+			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.fwd_from), message.fwd_from.id, message.fwd_from.id))
 			forwarded = True
 		
 		if forwarded:
@@ -350,7 +350,7 @@ class commandControl():
 		else:
 			out.append("Message sent by")
 		
-		out.append("[{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.from_user), message.from_user.id, message.from_user.id))
+		out.append("[{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.from_id), message.from_id.id, message.from_id.id))
 		
 		await self.__replySilence(message, " ".join(out))
 	
@@ -393,8 +393,8 @@ class commandControl():
 		elif len(command) == 1:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
-		elif "reply_to_message" in dir(message) and not message.reply_to_message is not None:
-			user = addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) #experimental change
+		elif "reply_to" in dir(message) and not message.reply_to is not None:
+			user = addUserToDatabase(message.chat, message.reply_to.from_id, add=True) #experimental change
 			await self.__replySilence(message, "Record for user `[{0[displayname]}](tg://user?id={0[id]})` created".format(user))
 	
 	async def help(self, client, message, issuer):
@@ -419,14 +419,14 @@ class commandControl():
 			await self.__replySilence("Please request access to insights of the data we have about you by issueing that command in private chat with me.")
 			return False
 		
-		targetuser = dbhelper.getResult(config["getuser"], (str(message.from_user.id),)).get()
+		targetuser = dbhelper.getResult(config["getuser"], (str(message.from_id.id),)).get()
 		if not len(targetuser) == 0:
-			message.command = [str(message.from_user.id)]
+			message.command = [str(message.from_id.id)]
 			await self.userstat(client, message, targetuser, ["issuedbyid"], limitedmode=True)
 			await self.__reply(message, "The most critical data is your telegram id and telegram username. One column belonging to you has been stripped off because it contains the telegram id by the user who wrote that comment about you or it has the value `NULL` meaning that no one wrote a comment about you yet (the 'comment' field does not contain anything). If you want to have this data removed, then message [this person](tg://user?id={}) and then we will look into it if having your data removed would not have a negative effect on our responsibility to keep unwanted users away from our groups.".format(config["botowner"]))
 		else:
 			await self.__reply(message, "We have no data about you!")
-			#await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_user))
+			#await self.__userNotFound(message, self.noncmd_getDisplayname(message.from_id))
 	
 	async def privacypolicy(self, client, message, issuer):
 		if not message.chat.type == "private":
@@ -446,8 +446,8 @@ class commandControl():
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [str(message.reply_to_message.from_user.id)]
+		if "reply_to" in dir(message) and message.reply_to is not None:
+			newcommand = [str(message.reply_to.from_id.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -476,12 +476,12 @@ class commandControl():
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [str(message.reply_to_message.from_user.id)]
+		if "reply_to" in dir(message) and message.reply_to is not None:
+			newcommand = [str(message.reply_to.from_id.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) # experimental change
+			addUserToDatabase(message.chat, message.reply_to.from_id, add=True) # experimental change
 		
 		if not len(command) == 2:
 			await self.__replySilence(message, "Syntax: `/changelevel <username or id> <level>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
@@ -515,15 +515,15 @@ class commandControl():
 		if issuer["level_int"] == 0:
 			await self.__ownerCannotDo(message)
 		else:
-			dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
+			dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_id.id)))
 			await self.__reply(message, "You are now powerless! Thank You for your effort to cut down spammers!")
 	
 	async def funban(self, client, message, issuer):
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [str(message.reply_to_message.from_user.id)]
+		if "reply_to" in dir(message) and message.reply_to is not None:
+			newcommand = [str(message.reply_to.from_id.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -542,7 +542,7 @@ class commandControl():
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], ("unbanned", targetuser["id"]))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), targetuser["id"]))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_id.id), targetuser["id"]))
 		dbhelper.sendToPostgres(config["changelevel"], ("user", targetuser["id"]))
 		
 		await self.__performUnban(message, issuer, targetuser)
@@ -553,20 +553,20 @@ class commandControl():
 		autoref = None # experimental change
 		message.security = "unknown"
 		
-		if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
-			newcommand = [str(message.reply_to_message.forward_from.id)]
+		if "fwd_from" in dir(message.reply_to) and message.reply_to.fwd_from is not None and message.reply_to.from_id.id == message.from_id.id:
+			newcommand = [str(message.reply_to.fwd_from.id)]
 			message.security = "highly secure because banned the original author of the forwarded message you sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			autoref = message.reply_to_message.forward_from # experimental change
-		elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
-			newcommand = [str(message.reply_to_message.from_user.id)]
+			autoref = message.reply_to.fwd_from # experimental change
+		elif "reply_to" in dir(message) and message.reply_to is not None:
+			newcommand = [str(message.reply_to.from_id.id)]
 			message.security = "highly secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			autoref = message.reply_to_message.from_user # experimental change
+			autoref = message.reply_to.from_id # experimental change
 		
 		if len(command) == 0:
 			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question.")
@@ -621,11 +621,11 @@ class commandControl():
 			return False
 		
 		dbhelper.sendToPostgres(config["updatecomment"], (" ".join(command), toban))
-		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_user.id), toban))
+		dbhelper.sendToPostgres(config["updateissuedbyid"], (str(message.from_id.id), toban))
 		dbhelper.sendToPostgres(config["changelevel"], ("banned", toban))
 		
 		targetuser["comment"] = " ".join(command)
-		targetuser["issuedbyid"] = str(message.from_user.id)
+		targetuser["issuedbyid"] = str(message.from_id.id)
 		
 		await self.noncmd_performBan(message, issuer, targetuser)
 		
@@ -652,7 +652,7 @@ class commandControl():
 			return False
 		newowner = int(targetuser["id"])
 		
-		dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_user.id)))
+		dbhelper.sendToPostgres(config["changelevel"], ("user", str(message.from_id.id)))
 		dbhelper.sendToPostgres(config["changelevel"], (config["LEVELS"][0], newowner))
 		
 		changeOwnerInFile(newowner)
@@ -764,7 +764,7 @@ class commandControl():
 			return False
 		
 		if issuer["level"] == "banned":
-			message.command = [str(message.from_user.id)]
+			message.command = [str(message.from_id.id)]
 			await self.userstat(client, message, issuer, ["issuedbyid"], limitedmode=True)
 			await self.__reply("You can complain about your ban in @osmadmininquiries or alternatively by contacting @valornaram")
 		else:
@@ -805,10 +805,10 @@ class commandControl():
 		command = message.command
 		
 		if not limitedmode:
-			if "forward_from" in dir(message.reply_to_message) and message.reply_to_message.forward_from is not None:
-				command = [str(message.reply_to_message.forward_from.id)]
-			elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
-				command = [str(message.reply_to_message.from_user.id)]
+			if "fwd_from" in dir(message.reply_to) and message.reply_to.fwd_from is not None:
+				command = [str(message.reply_to.fwd_from.id)]
+			elif "reply_to" in dir(message) and message.reply_to is not None:
+				command = [str(message.reply_to.from_id.id)]
 		if len(command) == 0:
 			await self.__reply(message, "Syntax `/userstat <username or id>` not used. If you wanted to see your stat, then execute `/mystat`.")
 			return True
@@ -845,7 +845,7 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		message.command = [str(message.from_user.id)]
+		message.command = [str(message.from_id.id)]
 		await self.userstat(client, message, issuer)
 	
 	async def mylevel(self, client, message, issuer):
@@ -862,7 +862,7 @@ class commandControl():
 		if not message.chat.type == "private":
 			return False
 		
-		await self.__replySilence(message, "Your id: `{}`".format(message.from_user.id))
+		await self.__replySilence(message, "Your id: `{}`".format(message.from_id.id))
 	
 	async def groupauthorized(self, client, message, issuer):  # belongs to fosmbot's core
 		if message.chat.id in config["groupslist"]:
@@ -1015,7 +1015,7 @@ async def banUserIfnecessary(message, user):
 
 @app.on_message(pyrogram.filters.command(allcommands))
 async def precommandprocessing(client, message): # belongs to fosmbot's core
-	user = addUserToDatabase(message.chat, message.from_user, add=True) # experimental change: add=True
+	user = addUserToDatabase(message.chat, message.from_id, add=True) # experimental change: add=True
 	if len(user) == 0:
 		return False
 	
@@ -1030,7 +1030,7 @@ async def precommandprocessing(client, message): # belongs to fosmbot's core
 			if "chat" in dir(message) and message.chat is not None:
 				objid = str(message.chat.id)
 			else:
-				objid = str(message.from_user.id)
+				objid = str(message.from_id.id)
 			
 			if "groupspecified" in config and command[0] in config["groupspecified"]:
 				if not objid == 0 and objid in config["groupspecified"][command[0]]:
@@ -1066,7 +1066,7 @@ async def userjoins(client, message): # belongs to fosmbot's core
 
 @app.on_message(pyrogram.filters.left_chat_member)
 async def userleaves(client, message): # sometimes it gets dispatched
-	user = dbhelper.getResult(config["getuser"], (str(message.from_user.id),), limit=1).get()
+	user = dbhelper.getResult(config["getuser"], (str(message.from_id.id),), limit=1).get()
 	if len(user) == 0:
 		return False
 	
@@ -1079,7 +1079,7 @@ async def userleaves(client, message): # sometimes it gets dispatched
 
 @app.on_message()
 async def messageFromUser(client, message): # belongs to fosmbot's core
-	user = addUserToDatabase(message.chat, message.from_user)
+	user = addUserToDatabase(message.chat, message.from_id)
 	
 	if len(user) == 0:
 		return False
@@ -1087,16 +1087,16 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 	if not str(message.chat.id) in user["groups"] and not message.chat.type == "private" and not message.chat.type == "channel":
 		addToGroup(message, user)
 	
-	if "forward_from" in dir(message) and message.forward_from is not None:
+	if "fwd_from" in dir(message) and message.fwd_from is not None:
 		if not "pseudoProfile" in user:
 			message.chat.type = "group" # @fosmbot must think that it is an authorized group from which the message came because otherwise it won't be possible for fedadmins and higher to preventive fban known spammers because @fosmbot wouldn't create a record of these spammers
 			for i in config["groupslist"]:
 				message.chat.id = i
 				break
-		addUserToDatabase(message.chat, message.forward_from)
+		addUserToDatabase(message.chat, message.fwd_from)
 		
-	if "reply_to_message" in dir(message) and message.reply_to_message is not None:
-		addUserToDatabase(message.chat, message.reply_to_message.from_user)
+	if "reply_to" in dir(message) and message.reply_to is not None:
+		addUserToDatabase(message.chat, message.reply_to.from_id)
 	
 	if message.chat.type == "channel" or message.chat.type == "private" or not message.chat.id in config["groupslist"]:
 		return False
