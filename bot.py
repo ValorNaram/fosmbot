@@ -339,7 +339,7 @@ class commandControl():
 	async def userid(self, client, message, issuer):
 		out = []
 		forwarded = False
-		message = message.reply_to
+		message = message.reply_to_message
 		
 		if "fwd_from" in dir(message) and message.fwd_from is not None:
 			out.append("Forwarded from [{}](tg://user?id={}) (`{}`)".format(self.noncmd_getDisplayname(message.fwd_from), message.fwd_from.id, message.fwd_from.id))
@@ -393,8 +393,8 @@ class commandControl():
 		elif len(command) == 1:
 			addUser(command[0], command[0], "Anonymous User {}".format(command[0]))
 			await self.__replySilence(message, "Record for user `{}` created".format(command[0]))
-		elif "reply_to" in dir(message) and not message.reply_to is not None:
-			user = addUserToDatabase(message.chat, message.reply_to.from_user, add=True) #experimental change
+		elif "reply_to_message" in dir(message) and not message.reply_to_message is not None:
+			user = addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) #experimental change
 			await self.__replySilence(message, "Record for user `[{0[displayname]}](tg://user?id={0[id]})` created".format(user))
 	
 	async def help(self, client, message, issuer):
@@ -446,8 +446,8 @@ class commandControl():
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to" in dir(message) and message.reply_to is not None:
-			newcommand = [str(message.reply_to.from_user.id)]
+		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -476,12 +476,12 @@ class commandControl():
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to" in dir(message) and message.reply_to is not None:
-			newcommand = [str(message.reply_to.from_user.id)]
+		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			addUserToDatabase(message.chat, message.reply_to.from_user, add=True) # experimental change
+			addUserToDatabase(message.chat, message.reply_to_message.from_user, add=True) # experimental change
 		
 		if not len(command) == 2:
 			await self.__replySilence(message, "Syntax: `/changelevel <username or id> <level>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question")
@@ -522,8 +522,8 @@ class commandControl():
 		targetuser = {}
 		command = message.command
 		
-		if "reply_to" in dir(message) and message.reply_to is not None:
-			newcommand = [str(message.reply_to.from_user.id)]
+		if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
@@ -553,20 +553,20 @@ class commandControl():
 		autoref = None # experimental change
 		message.security = "unknown"
 		
-		if "fwd_from" in dir(message.reply_to) and message.reply_to.fwd_from is not None and message.reply_to.from_user.id == message.from_user.id:
-			newcommand = [str(message.reply_to.fwd_from.id)]
+		if "fwd_from" in dir(message.reply_to_message) and message.reply_to_message.fwd_from is not None and message.reply_to_message.from_user.id == message.from_user.id:
+			newcommand = [str(message.reply_to_message.fwd_from.id)]
 			message.security = "highly secure because banned the original author of the forwarded message you sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			autoref = message.reply_to.fwd_from # experimental change
-		elif "reply_to" in dir(message) and message.reply_to is not None:
-			newcommand = [str(message.reply_to.from_user.id)]
+			autoref = message.reply_to_message.fwd_from # experimental change
+		elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
+			newcommand = [str(message.reply_to_message.from_user.id)]
 			message.security = "highly secure because replied to a message the spammer sent (using telegram id)"
 			for i in command:
 				newcommand.append(i)
 			command = newcommand
-			autoref = message.reply_to.from_user # experimental change
+			autoref = message.reply_to_message.from_user # experimental change
 		
 		if len(command) == 0:
 			await self.__replySilence(message, "Syntax: `/fban <username or id> <reason (optional)>`. To have `<username or id>` to be automatically filled out, reply the command to a message from the user in question.")
@@ -805,10 +805,10 @@ class commandControl():
 		command = message.command
 		
 		if not limitedmode:
-			if "fwd_from" in dir(message.reply_to) and message.reply_to.fwd_from is not None:
-				command = [str(message.reply_to.fwd_from.id)]
-			elif "reply_to" in dir(message) and message.reply_to is not None:
-				command = [str(message.reply_to.from_user.id)]
+			if "fwd_from" in dir(message.reply_to_message) and message.reply_to_message.fwd_from is not None:
+				command = [str(message.reply_to_message.fwd_from.id)]
+			elif "reply_to_message" in dir(message) and message.reply_to_message is not None:
+				command = [str(message.reply_to_message.from_user.id)]
 		if len(command) == 0:
 			await self.__reply(message, "Syntax `/userstat <username or id>` not used. If you wanted to see your stat, then execute `/mystat`.")
 			return True
@@ -1095,8 +1095,8 @@ async def messageFromUser(client, message): # belongs to fosmbot's core
 				break
 		addUserToDatabase(message.chat, message.fwd_from)
 		
-	if "reply_to" in dir(message) and message.reply_to is not None:
-		addUserToDatabase(message.chat, message.reply_to.from_user)
+	if "reply_to_message" in dir(message) and message.reply_to_message is not None:
+		addUserToDatabase(message.chat, message.reply_to_message.from_user)
 	
 	if message.chat.type == "channel" or message.chat.type == "private" or not message.chat.id in config["groupslist"]:
 		return False
